@@ -3,12 +3,10 @@ package com.alain898.collection;
 /**
  * Created by alain on 16/8/16.
  */
-public interface IPartition<T> {
-    void add(T t);
+public interface IPartition<E> {
+    void add(E e);
 
-    T get(int index);
+    E get(long index);
 
-    IBlock getBlock(int blockIndex);
-
-    int getLastIndex();
+    long getLastIndex();
 }

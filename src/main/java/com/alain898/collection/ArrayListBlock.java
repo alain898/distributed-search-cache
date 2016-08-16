@@ -9,10 +9,10 @@ import java.util.List;
 /**
  * Created by alain on 16/8/16.
  */
-public class ArrayListBlock<T> implements IBlock<T> {
+public class ArrayListBlock<E> implements IBlock<E> {
     private static final int DEFAULT_INITIAL_CAPACITY = 32;
 
-    private final List<T> elems;
+    private final List<E> elems;
 
     public ArrayListBlock() {
         this(DEFAULT_INITIAL_CAPACITY);
@@ -21,7 +21,7 @@ public class ArrayListBlock<T> implements IBlock<T> {
     public ArrayListBlock(int initialCapacity) {
         Preconditions.checkArgument(initialCapacity >= 0, "negative initialCapacity");
 
-        this.elems = new ArrayList<T>(initialCapacity);
+        this.elems = new ArrayList<E>(initialCapacity);
     }
 
     public Iterator iterator() {
@@ -36,15 +36,15 @@ public class ArrayListBlock<T> implements IBlock<T> {
         return false;
     }
 
-    public T get(int index) {
+    public E get(int index) {
         return elems.get(index);
     }
 
-    public boolean add(T t) {
-        return elems.add(t);
+    public boolean add(E e) {
+        return elems.add(e);
     }
 
-    public T set(int index, T element) {
+    public E set(int index, E element) {
         return elems.set(index, element);
     }
 
