@@ -1,4 +1,4 @@
-package com.alain898.annotations;
+package com.alain898.dscache.annotations;
 
 
 import java.lang.annotation.*;

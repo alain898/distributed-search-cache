@@ -1,4 +1,4 @@
-package com.alain898.collection;
+package com.alain898.dscache.collection;
 
 import com.google.common.base.Preconditions;
 

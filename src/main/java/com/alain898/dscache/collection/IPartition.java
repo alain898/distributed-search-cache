@@ -1,4 +1,4 @@
-package com.alain898.collection;
+package com.alain898.dscache.collection;
 
 /**
  * Created by alain on 16/8/16.

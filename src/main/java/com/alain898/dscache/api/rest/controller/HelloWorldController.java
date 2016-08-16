@@ -1,0 +1,27 @@
+package com.alain898.dscache.api.rest.controller;
+
+import org.apache.commons.lang3.StringUtils;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.core.Context;
+
+/**
+ * Created by alain on 16/8/16.
+ */
+@Path("/hello")
+public class HelloWorldController {
+    @GET
+    @Path("/{who}")
+    public String verify(@Context final HttpServletResponse response,
+                         @PathParam("who") final String who) {
+        if (StringUtils.isNotBlank(who)) {
+            return "hello " + who;
+        } else {
+            return "hello nobody";
+        }
+
+    }
+}
