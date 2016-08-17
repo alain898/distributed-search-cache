@@ -21,7 +21,7 @@ public class ArrayListBlock<E> implements IBlock<E> {
     public ArrayListBlock(int initialCapacity) {
         Preconditions.checkArgument(initialCapacity >= 0, "negative initialCapacity");
 
-        this.elems = new ArrayList<E>(initialCapacity);
+        this.elems = new ArrayList<>(initialCapacity);
     }
 
     public Iterator iterator() {

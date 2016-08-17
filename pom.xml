@@ -21,7 +21,7 @@
         <gson.version>2.3.1</gson.version>
         <junit.version>4.11</junit.version>
         <slf4j.version>1.7.6</slf4j.version>
-        <!--the latest jetty version which support jersey container is 9.2.10.v20150310 -->
+        <!--the latest jetty version which supports jersey container is 9.2.10.v20150310 -->
         <jetty.version>9.2.10.v20150310</jetty.version>
     </properties>
 
