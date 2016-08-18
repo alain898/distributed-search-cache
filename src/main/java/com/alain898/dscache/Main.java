@@ -1,6 +1,7 @@
 package com.alain898.dscache;
 
 import com.alain898.dscache.api.rest.RestResource;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.commons.daemon.DaemonInitException;
@@ -48,6 +49,7 @@ public class Main implements Daemon {
 
             URI baseUri = UriBuilder.fromUri(url).port(port).build();
             ResourceConfig config = new RestResource();
+            config.register(JacksonJsonProvider.class);
             server = JettyHttpContainerFactory.createServer(baseUri, config);
 
             server.start();

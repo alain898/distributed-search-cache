@@ -15,8 +15,8 @@ import javax.ws.rs.core.Context;
 public class HelloWorldController {
     @GET
     @Path("/{who}")
-    public String verify(@Context final HttpServletResponse response,
-                         @PathParam("who") final String who) {
+    public String hello(@Context final HttpServletResponse httpServletResponse,
+                        @PathParam("who") final String who) {
         if (StringUtils.isNotBlank(who)) {
             return "hello " + who;
         } else {
