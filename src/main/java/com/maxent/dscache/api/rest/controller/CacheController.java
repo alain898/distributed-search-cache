@@ -1,4 +1,4 @@
-package com.alain898.dscache.api.rest.controller;
+package com.maxent.dscache.api.rest.controller;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.POST;

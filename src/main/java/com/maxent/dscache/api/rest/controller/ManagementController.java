@@ -1,7 +1,7 @@
-package com.alain898.dscache.api.rest.controller;
+package com.maxent.dscache.api.rest.controller;
 
-import com.alain898.dscache.api.rest.request.RestAddHostsRequest;
-import com.alain898.dscache.api.rest.response.RestAddHostsResponse;
+import com.maxent.dscache.api.rest.request.RestAddHostsRequest;
+import com.maxent.dscache.api.rest.response.RestAddHostsResponse;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;

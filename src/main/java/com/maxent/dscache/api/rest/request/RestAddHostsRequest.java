@@ -1,4 +1,4 @@
-package com.alain898.dscache.api.rest.request;
+package com.maxent.dscache.api.rest.request;
 
 import java.util.List;
 

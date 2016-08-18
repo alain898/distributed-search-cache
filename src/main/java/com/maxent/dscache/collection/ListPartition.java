@@ -1,6 +1,6 @@
-package com.alain898.dscache.collection;
+package com.maxent.dscache.collection;
 
-import com.alain898.dscache.annotations.NotThreadSafe;
+import com.maxent.dscache.annotations.NotThreadSafe;
 import com.google.common.base.Preconditions;
 
 import java.util.HashMap;

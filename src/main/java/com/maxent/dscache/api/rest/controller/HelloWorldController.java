@@ -1,4 +1,4 @@
-package com.alain898.dscache.api.rest.controller;
+package com.maxent.dscache.api.rest.controller;
 
 import org.apache.commons.lang3.StringUtils;
 

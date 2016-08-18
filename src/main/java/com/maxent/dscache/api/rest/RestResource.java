@@ -1,4 +1,4 @@
-package com.alain898.dscache.api.rest;
+package com.maxent.dscache.api.rest;
 
 import org.glassfish.jersey.server.ResourceConfig;
 

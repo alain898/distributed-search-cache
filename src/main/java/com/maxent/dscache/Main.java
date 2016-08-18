@@ -1,6 +1,6 @@
-package com.alain898.dscache;
+package com.maxent.dscache;
 
-import com.alain898.dscache.api.rest.RestResource;
+import com.maxent.dscache.api.rest.RestResource;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;

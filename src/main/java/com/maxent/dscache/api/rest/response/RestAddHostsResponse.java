@@ -1,4 +1,4 @@
-package com.alain898.dscache.api.rest.response;
+package com.maxent.dscache.api.rest.response;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 

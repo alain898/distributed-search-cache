@@ -1,4 +1,4 @@
-package com.alain898.dscache.api.rest.response;
+package com.maxent.dscache.api.rest.response;
 
 /**
  * Created by alain on 16/8/18.
