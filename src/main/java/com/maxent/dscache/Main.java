@@ -7,13 +7,14 @@ import org.apache.commons.daemon.DaemonContext;
 import org.apache.commons.daemon.DaemonInitException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.eclipse.jetty.server.Server;
-import org.glassfish.jersey.jetty.JettyHttpContainerFactory;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.UriBuilder;
-import java.net.URI;
+import java.net.InetSocketAddress;
 import java.util.Properties;
 
 
@@ -24,11 +25,11 @@ public class Main implements Daemon {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private static final String DEFAULT_REST_SERVER_URL = "http://localhost/";
+    private static final String DEFAULT_REST_SERVER_IP = "127.0.0.1";
     private static final int DEFAULT_REST_SERVER_PORT = 2222;
     private Server server;
 
-    private String url;
+    private String ip;
     private int port;
 
     @Override
@@ -44,13 +45,16 @@ public class Main implements Daemon {
 
             Properties props = new Properties();
             props.load(Main.class.getClassLoader().getResourceAsStream("conf.properties"));
-            url = props.getProperty("url", DEFAULT_REST_SERVER_URL);
+            ip = props.getProperty("ip", DEFAULT_REST_SERVER_IP);
             port = Integer.parseInt(props.getProperty("port", String.valueOf(DEFAULT_REST_SERVER_PORT)));
 
-            URI baseUri = UriBuilder.fromUri(url).port(port).build();
             ResourceConfig config = new RestResource();
             config.register(JacksonJsonProvider.class);
-            server = JettyHttpContainerFactory.createServer(baseUri, config);
+
+            ServletHolder servlet = new ServletHolder(new ServletContainer(config));
+            server = new Server(new InetSocketAddress(ip, port));
+            ServletContextHandler context = new ServletContextHandler(server, "/*");
+            context.addServlet(servlet, "/*");
 
             server.start();
             logger.info("started successfully.");

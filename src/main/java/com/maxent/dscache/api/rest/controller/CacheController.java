@@ -10,8 +10,16 @@ import javax.ws.rs.core.Context;
  */
 @Path("/cache")
 public class CacheController {
+
     @POST
-    @Path("/save")
+    @Path("")
+    public String create(@Context final HttpServletResponse httpServletResponse,
+                       final String request) {
+        return "create " + request;
+    }
+
+    @POST
+    @Path("{cache_id}/save")
     public String save(@Context final HttpServletResponse httpServletResponse,
                        final String request) {
         return "save " + request;
