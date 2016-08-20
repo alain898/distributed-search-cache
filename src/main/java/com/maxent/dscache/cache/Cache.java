@@ -17,14 +17,17 @@ import java.util.List;
  * Created by alain on 16/8/18.
  */
 public class Cache<E extends ICacheEntry> {
+    private final Class<E> cacheEntryClass;
     private IPartitioner partitioner;
     private List<IPartition<E>> partitions;
 
-    public Cache(int partitionNumber, int blockCapacity, long blockNumber) {
+    public Cache(Class<E> cacheEntryClass, int partitionNumber, int blockCapacity, long blockNumber) {
+        Preconditions.checkNotNull(cacheEntryClass, "cacheEntryClass is null");
         Preconditions.checkArgument(partitionNumber > 0, "partitionNumber must be positive");
         Preconditions.checkArgument(blockCapacity > 0, "blockCapacity must be positive");
         Preconditions.checkArgument(blockNumber > 0, "blockNumber must be positive");
 
+        this.cacheEntryClass = cacheEntryClass;
         this.partitioner = new HashPartitioner(partitionNumber);
         this.partitions = createPartitions(partitionNumber, blockCapacity, blockNumber);
     }
@@ -35,6 +38,10 @@ public class Cache<E extends ICacheEntry> {
             partitions.add(new ListPartition<>(blockCapacity, totalBlockNumber));
         }
         return partitions;
+    }
+
+    public Class<E> getCacheEntryClass() {
+        return cacheEntryClass;
     }
 
     public List<Pair<E, Double>> match(E query) {

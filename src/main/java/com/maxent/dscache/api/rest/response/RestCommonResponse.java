@@ -1,9 +1,12 @@
 package com.maxent.dscache.api.rest.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 /**
  * Created by alain on 16/8/18.
  */
-public class RestCommonResponse {
+@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
+public abstract class RestCommonResponse {
     private String error;
 
     public String getError() {

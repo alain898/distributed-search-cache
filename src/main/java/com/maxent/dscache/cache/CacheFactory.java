@@ -28,6 +28,6 @@ public class CacheFactory {
             throw new RuntimeException(errInfo);
         }
 
-        return new Cache<>(partitions, block_capacity, blocks_per_partition);
+        return new Cache<>(clazz, partitions, block_capacity, blocks_per_partition);
     }
 }

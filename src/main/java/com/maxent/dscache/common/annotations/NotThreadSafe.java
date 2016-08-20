@@ -1,4 +1,4 @@
-package com.maxent.dscache.annotations;
+package com.maxent.dscache.common.annotations;
 
 
 import java.lang.annotation.*;

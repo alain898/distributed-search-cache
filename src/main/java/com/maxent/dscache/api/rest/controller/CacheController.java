@@ -8,6 +8,7 @@ import com.maxent.dscache.cache.exceptions.CacheExistException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -16,6 +17,7 @@ import javax.ws.rs.core.Context;
 /**
  * Created by alain on 16/8/17.
  */
+@Singleton
 @Path("/cache")
 public class CacheController {
     private static final Logger logger = LoggerFactory.getLogger(CacheController.class);
@@ -44,7 +46,7 @@ public class CacheController {
                             request.getBlock_capacity()));
         } catch (CacheExistException e) {
             String errInfo = String.format("cache[%s] already exist", request.getName());
-            logger.error(errInfo, e);
+            logger.warn(errInfo, e);
             return RestHelper.doResponse(
                     httpServletResponse,
                     HttpServletResponse.SC_OK,

@@ -1,6 +1,6 @@
 package com.maxent.dscache.cache.collection;
 
-import com.maxent.dscache.annotations.NotThreadSafe;
+import com.maxent.dscache.common.annotations.NotThreadSafe;
 import com.google.common.base.Preconditions;
 
 import java.util.HashMap;

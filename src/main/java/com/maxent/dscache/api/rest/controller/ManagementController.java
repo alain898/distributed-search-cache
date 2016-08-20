@@ -3,6 +3,7 @@ package com.maxent.dscache.api.rest.controller;
 import com.maxent.dscache.api.rest.request.RestAddHostsRequest;
 import com.maxent.dscache.api.rest.response.RestAddHostsResponse;
 
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -14,6 +15,7 @@ import javax.ws.rs.core.MediaType;
 /**
  * Created by alain on 16/8/18.
  */
+@Singleton
 @Path("/management")
 public class ManagementController {
     @POST
