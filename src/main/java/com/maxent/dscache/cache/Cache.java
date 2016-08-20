@@ -2,8 +2,9 @@ package com.maxent.dscache.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.maxent.dscache.collection.IPartition;
-import com.maxent.dscache.collection.ListPartition;
+import com.maxent.dscache.cache.ICacheEntry;
+import com.maxent.dscache.cache.collection.IPartition;
+import com.maxent.dscache.cache.collection.ListPartition;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.partitioner.IPartitioner;
 import org.apache.commons.lang3.StringUtils;

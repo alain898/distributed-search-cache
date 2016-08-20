@@ -1,4 +1,4 @@
-package com.maxent.dscache.collection;
+package com.maxent.dscache.cache.collection;
 
 import junit.framework.TestCase;
 import org.junit.Test;

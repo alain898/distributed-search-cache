@@ -1,4 +1,4 @@
-package com.maxent.dscache.collection;
+package com.maxent.dscache.cache.collection;
 
 import com.maxent.dscache.annotations.NotThreadSafe;
 import com.google.common.base.Preconditions;

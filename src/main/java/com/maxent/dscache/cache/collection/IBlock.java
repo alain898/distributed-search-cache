@@ -1,4 +1,4 @@
-package com.maxent.dscache.collection;
+package com.maxent.dscache.cache.collection;
 
 /**
  * Created by alain on 16/8/16.
