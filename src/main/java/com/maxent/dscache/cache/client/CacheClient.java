@@ -2,6 +2,7 @@ package com.maxent.dscache.cache.client;
 
 import com.maxent.dscache.api.rest.request.RestCacheMatchRequest;
 import com.maxent.dscache.api.rest.response.RestCacheMatchResponse;
+import com.maxent.dscache.cache.CacheInfoCenter;
 import com.maxent.dscache.cache.ICacheEntry;
 import com.maxent.dscache.cache.PhysicalHost;
 import com.maxent.dscache.cache.VirtualHost;

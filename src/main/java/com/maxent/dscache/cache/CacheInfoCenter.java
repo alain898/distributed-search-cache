@@ -1,6 +1,5 @@
-package com.maxent.dscache.cache.client;
+package com.maxent.dscache.cache;
 
-import com.maxent.dscache.cache.VirtualHost;
 import com.maxent.dscache.common.partitioner.IPartitioner;
 
 import java.util.List;
