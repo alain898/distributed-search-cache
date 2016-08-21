@@ -1,7 +1,5 @@
 package com.maxent.dscache.cache;
 
-import com.maxent.dscache.cache.client.CacheGroup;
-
 /**
  * Created by alain on 16/8/20.
  */
