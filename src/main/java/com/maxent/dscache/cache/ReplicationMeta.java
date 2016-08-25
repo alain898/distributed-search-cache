@@ -5,6 +5,7 @@ package com.maxent.dscache.cache;
  */
 public class ReplicationMeta {
     private int id;
+    private String zkNodeName;
     private Host host;
 
     public int getId() {
@@ -21,5 +22,13 @@ public class ReplicationMeta {
 
     public void setHost(Host host) {
         this.host = host;
+    }
+
+    public String getZkNodeName() {
+        return zkNodeName;
+    }
+
+    public void setZkNodeName(String zkNodeName) {
+        this.zkNodeName = zkNodeName;
     }
 }

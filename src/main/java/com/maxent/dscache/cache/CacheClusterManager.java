@@ -1,7 +1,10 @@
 package com.maxent.dscache.cache;
 
 import com.google.common.base.Charsets;
+import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
+import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
+import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
@@ -154,6 +157,52 @@ public class CacheClusterManager {
         return null;
     }
 
+    private void createCacheInCluster(CacheMeta cacheMeta) {
+        HttpClient httpClient = new HttpClient();
+        List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
+        for (SubCacheMeta subCache : subCaches) {
+            ReplicationMeta meta = subCache.getReplicationMetas().get(0);
+            Host host = meta.getHost();
+            String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+            String path = "/cache/subcache";
+            RestCreateCacheResponse createCacheResponse =
+                    httpClient.post(url, path, new RestCreateCacheRequest(), RestCreateCacheResponse.class);
+            if (createCacheResponse == null) {
+                throw new RuntimeException(String.format("failed to create subcache[%s]", JsonUtils.toJson(subCache)));
+            }
+        }
+    }
+
+    private void doCreateCache(CacheMeta cacheMeta) throws Exception {
+        String name = cacheMeta.getName();
+        String cacheZkPath = StringUtils.join(CACHE_CLUSTER_PATH, "/", name);
+        CacheZnode cacheZnode = new CacheZnode();
+        cacheZnode.setName(cacheMeta.getName());
+        cacheZnode.setVersion(cacheMeta.getVersion());
+        cacheZnode.setEntryClassName(cacheMeta.getEntryClassName());
+        cacheZnode.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
+        zkClient.create().forPath(cacheZkPath);
+        zkClient.setData().forPath(cacheZkPath, JsonUtils.toJson(cacheZnode).getBytes(Charsets.UTF_8));
+
+        for (SubCacheMeta subCacheMeta : cacheMeta.getSubCacheMetas()) {
+            SubCacheZnode subCacheZnode = new SubCacheZnode();
+            subCacheZnode.setId(subCacheMeta.getId());
+            String subCacheZkPath = StringUtils.join(cacheZkPath, "/", subCacheMeta.getZkNodeName());
+            zkClient.create().forPath(subCacheZkPath);
+            zkClient.setData().forPath(subCacheZkPath, JsonUtils.toJson(subCacheZnode).getBytes(Charsets.UTF_8));
+
+            for (ReplicationMeta replicationMeta : subCacheMeta.getReplicationMetas()) {
+                ReplicationZnode replicationZnode = new ReplicationZnode();
+                replicationZnode.setId(replicationMeta.getId());
+                replicationZnode.setHostId(replicationMeta.getHost().getId());
+                String replicationZkPath = StringUtils.join(subCacheZkPath, "/", replicationMeta.getZkNodeName());
+                zkClient.create().forPath(replicationZkPath);
+                zkClient.setData().forPath(replicationZkPath,
+                        JsonUtils.toJson(replicationZnode).getBytes(Charsets.UTF_8));
+            }
+        }
+    }
+
     public void createCache(String name, String entryClassName, int subCaches, int partitionsPerSubCache)
             throws Exception {
         InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
@@ -178,6 +227,7 @@ public class CacheClusterManager {
             for (int i = 0; i < subCaches; i++) {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(i);
+                subCacheMeta.setZkNodeName(String.format("subcache%d", i));
                 ReplicationMeta replicationMeta = new ReplicationMeta();
                 replicationMeta.setHost(hosts.get(i % hosts.size()));
                 List<ReplicationMeta> replicationMetas = new ArrayList<>();
@@ -187,6 +237,13 @@ public class CacheClusterManager {
             }
             cacheMeta.setSubCacheMetas(subCacheMetas);
             cacheMeta.setPartitionsPerSubCache(partitionsPerSubCache);
+
+
+            createCacheInCluster(cacheMeta);
+
+            doCreateCache(cacheMeta);
+
+
         } finally {
             lock.release();
         }

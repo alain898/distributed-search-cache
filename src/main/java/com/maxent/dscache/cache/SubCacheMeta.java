@@ -7,6 +7,7 @@ import java.util.List;
  */
 public class SubCacheMeta {
     private int id;
+    private String zkNodeName;
     private List<ReplicationMeta> replicationMetas;
 
     public int getId() {
@@ -23,5 +24,13 @@ public class SubCacheMeta {
 
     public void setReplicationMetas(List<ReplicationMeta> replicationMetas) {
         this.replicationMetas = replicationMetas;
+    }
+
+    public String getZkNodeName() {
+        return zkNodeName;
+    }
+
+    public void setZkNodeName(String zkNodeName) {
+        this.zkNodeName = zkNodeName;
     }
 }
