@@ -22,8 +22,19 @@ public class ManagementController {
     @Path("/hosts")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public RestAddHostsResponse addhosts(@Context final HttpServletResponse httpServletResponse,
+    public RestAddHostsResponse addHosts(@Context final HttpServletResponse httpServletResponse,
                                          final RestAddHostsRequest request) {
+        RestAddHostsResponse response = new RestAddHostsResponse();
+        response.setMessage("success");
+        return response;
+    }
+
+    @POST
+    @Path("/caches")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public RestAddHostsResponse addCaches(@Context final HttpServletResponse httpServletResponse,
+                                          final RestAddHostsRequest request) {
         RestAddHostsResponse response = new RestAddHostsResponse();
         response.setMessage("success");
         return response;
