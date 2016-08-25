@@ -7,8 +7,17 @@ public class Host {
     /**
      * VirtualHost 和 Host 是多对多的对应关系,
      */
+    private int id;
     private String host;
     private int port;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
 
     public String getHost() {
         return host;

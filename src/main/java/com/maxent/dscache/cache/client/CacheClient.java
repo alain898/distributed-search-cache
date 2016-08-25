@@ -2,14 +2,9 @@ package com.maxent.dscache.cache.client;
 
 import com.maxent.dscache.api.rest.request.RestCacheMatchRequest;
 import com.maxent.dscache.api.rest.response.RestCacheMatchResponse;
-import com.maxent.dscache.cache.CacheClusterManager;
-import com.maxent.dscache.cache.Host;
-import com.maxent.dscache.cache.ICacheEntry;
+import com.maxent.dscache.cache.*;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.http.HttpClient;
-import com.maxent.dscache.common.partitioner.IPartitioner;
-
-import java.util.List;
 
 /**
  * Created by alain on 16/8/20.
@@ -22,17 +17,18 @@ public class CacheClient {
         this.clusterCenter = clusterCenter;
     }
 
-    public CacheSearchResponse search(String cacheGroupName, ICacheEntry entry) {
-        String keys = entry.key();
-        IPartitioner partitioner = clusterCenter.getPartitioner(cacheGroupName);
-        int partitionId = partitioner.getPartition(keys);
-        List<VirtualHost> virtualHosts = clusterCenter.getVirtualHosts(cacheGroupName);
-        int virtualHostsNumber = virtualHosts.size();
-        int virtualHostId = partitionId / virtualHostsNumber;
-        VirtualHost virtualHost = virtualHosts.get(virtualHostId);
-        Host physicalHost = virtualHost.getPhysicalHost();
+    public CacheSearchResponse search(String cacheName, ICacheEntry entry) {
 
-        String url = String.format("http://%s:%d", physicalHost.getHost(), physicalHost.getPort());
+        String keys = entry.key();
+        CacheMeta cache = clusterCenter.getCache(cacheName);
+        int partition = cache.getPartitioner().getPartition(keys);
+        int subCacheId = partition / cache.getPartitionsPerSubCache();
+
+        SubCacheMeta subCacheMeta = cache.getSubCacheMetas().get(subCacheId);
+        // TODO: choose replication
+        Host host = subCacheMeta.getReplicationMetas().get(0).getHost();
+
+        String url = String.format("http://%s:%d", host.getHost(), host.getPort());
         String path = "/cache/match";
         HttpClient httpClient = new HttpClient();
         RestCacheMatchResponse restCacheMatchResponse =
