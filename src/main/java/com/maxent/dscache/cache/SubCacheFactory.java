@@ -6,14 +6,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by alain on 16/8/20.
  */
-public class CacheFactory {
-    private static final Logger logger = LoggerFactory.getLogger(CacheFactory.class);
+public class SubCacheFactory {
+    private static final Logger logger = LoggerFactory.getLogger(SubCacheFactory.class);
 
-    public static <E extends ICacheEntry> Cache<E> newCache(String name,
-                                                            String provider,
-                                                            int partitions,
-                                                            int blocks_per_partition,
-                                                            int block_capacity) {
+    public static <E extends ICacheEntry> SubCache<E> newCache(String name,
+                                                               String provider,
+                                                               int partitions,
+                                                               int blocks_per_partition,
+                                                               int block_capacity) {
         Class clazz;
         try {
             clazz = ClassLoader.getSystemClassLoader().loadClass(provider);
@@ -28,6 +28,6 @@ public class CacheFactory {
             throw new RuntimeException(errInfo);
         }
 
-        return new Cache<>(clazz, partitions, block_capacity, blocks_per_partition);
+        return new SubCache<>(clazz, partitions, block_capacity, blocks_per_partition);
     }
 }

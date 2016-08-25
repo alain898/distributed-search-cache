@@ -10,9 +10,9 @@ import java.util.Map;
 /**
  * Created by alain on 16/8/20.
  */
-public class CacheManager {
+public class SubCacheManager {
     private final Object lock = new Object();
-    private Map<String, Cache<ICacheEntry>> caches = new HashMap<>();
+    private Map<String, SubCache<ICacheEntry>> caches = new HashMap<>();
 
     public void addCache(String name,
                          String provider,
@@ -27,17 +27,17 @@ public class CacheManager {
 
         synchronized (lock) {
             if (caches.containsKey(name)) {
-                throw new CacheExistException(String.format("cache[%s] exist", name));
+                throw new CacheExistException(String.format("subCache[%s] exist", name));
             }
 
-            Cache<ICacheEntry> cache = CacheFactory.newCache(
+            SubCache<ICacheEntry> subCache = SubCacheFactory.newCache(
                     name,
                     provider,
                     partitions,
                     blocks_per_partition,
                     block_capacity);
 
-            caches.put(name, cache);
+            caches.put(name, subCache);
         }
     }
 }

@@ -3,7 +3,7 @@ package com.maxent.dscache.api.rest.controller;
 import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
-import com.maxent.dscache.cache.CacheManager;
+import com.maxent.dscache.cache.SubCacheManager;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,14 +22,14 @@ import javax.ws.rs.core.Context;
 public class CacheController {
     private static final Logger logger = LoggerFactory.getLogger(CacheController.class);
 
-    private CacheManager cacheManager = new CacheManager();
+    private SubCacheManager subCacheManager = new SubCacheManager();
 
     @POST
     public RestCreateCacheResponse create(@Context final HttpServletResponse httpServletResponse,
                                           final RestCreateCacheRequest request) {
 
         try {
-            cacheManager.addCache(
+            subCacheManager.addCache(
                     request.getName(),
                     request.getProvider(),
                     request.getPartitions(),

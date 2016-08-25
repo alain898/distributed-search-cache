@@ -16,12 +16,12 @@ import java.util.List;
 /**
  * Created by alain on 16/8/18.
  */
-public class Cache<E extends ICacheEntry> {
+public class SubCache<E extends ICacheEntry> {
     private final Class<E> cacheEntryClass;
     private IPartitioner partitioner;
     private List<IPartition<E>> partitions;
 
-    public Cache(Class<E> cacheEntryClass, int partitionNumber, int blockCapacity, long blockNumber) {
+    public SubCache(Class<E> cacheEntryClass, int partitionNumber, int blockCapacity, long blockNumber) {
         Preconditions.checkNotNull(cacheEntryClass, "cacheEntryClass is null");
         Preconditions.checkArgument(partitionNumber > 0, "partitionNumber must be positive");
         Preconditions.checkArgument(blockCapacity > 0, "blockCapacity must be positive");
