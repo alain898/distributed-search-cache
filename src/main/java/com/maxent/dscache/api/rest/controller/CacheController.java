@@ -1,8 +1,10 @@
 package com.maxent.dscache.api.rest.controller;
 
 import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
+import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
+import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.ICacheEntry;
@@ -35,32 +37,32 @@ public class CacheController {
     private SubCacheManager subCacheManager = new SubCacheManager();
 
     @POST
-    public RestCreateCacheResponse create(@Context final HttpServletResponse httpServletResponse,
-                                          final RestCreateCacheRequest request) {
+    public RestCreateSubCacheResponse create(@Context final HttpServletResponse httpServletResponse,
+                                             final RestCreateSubCacheRequest request) {
 
         try {
             subCacheManager.addSubCache(
                     request.getName(),
-                    request.getProvider(),
-                    request.getPartitions(),
-                    request.getBlocks_per_partition(),
-                    request.getBlock_capacity());
+                    request.getEntryClassName(),
+                    request.getPartitionsPerSubCache(),
+                    request.getBlocksPerPartition(),
+                    request.getBlockCapacity());
             return RestHelper.doResponse(
                     httpServletResponse,
                     HttpServletResponse.SC_CREATED,
-                    new RestCreateCacheResponse(
+                    new RestCreateSubCacheResponse(
                             request.getName(),
-                            request.getProvider(),
-                            request.getPartitions(),
-                            request.getBlocks_per_partition(),
-                            request.getBlock_capacity()));
+                            request.getEntryClassName(),
+                            request.getPartitionsPerSubCache(),
+                            request.getBlocksPerPartition(),
+                            request.getBlockCapacity()));
         } catch (CacheExistException e) {
             String errInfo = String.format("cache[%s] already exist", request.getName());
             logger.warn(errInfo, e);
             return RestHelper.doResponse(
                     httpServletResponse,
                     HttpServletResponse.SC_OK,
-                    RestHelper.createErrorResponse(RestCreateCacheResponse.class, errInfo));
+                    RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo));
         } catch (Exception e) {
             String errInfo = String.format(
                     "failed to create cache[%s], exception[%s]",
@@ -69,7 +71,7 @@ public class CacheController {
             return RestHelper.doResponse(
                     httpServletResponse,
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    RestHelper.createErrorResponse(RestCreateCacheResponse.class, errInfo));
+                    RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo));
         }
     }
 

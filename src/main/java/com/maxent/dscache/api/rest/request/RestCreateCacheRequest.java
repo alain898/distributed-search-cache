@@ -4,12 +4,12 @@ package com.maxent.dscache.api.rest.request;
  * Created by alain on 16/8/20.
  */
 public class RestCreateCacheRequest {
-    private String name;
-    private String provider;
-
-    private int partitions;
-    private int blocks_per_partition;
-    private int block_capacity;
+    String name;
+    String entryClassName;
+    int subCaches;
+    int partitionsPerSubCache;
+    int blockCapacity;
+    int blocksPerPartition;
 
     public String getName() {
         return name;
@@ -19,35 +19,43 @@ public class RestCreateCacheRequest {
         this.name = name;
     }
 
-    public String getProvider() {
-        return provider;
+    public String getEntryClassName() {
+        return entryClassName;
     }
 
-    public void setProvider(String provider) {
-        this.provider = provider;
+    public void setEntryClassName(String entryClassName) {
+        this.entryClassName = entryClassName;
     }
 
-    public int getPartitions() {
-        return partitions;
+    public int getSubCaches() {
+        return subCaches;
     }
 
-    public void setPartitions(int partitions) {
-        this.partitions = partitions;
+    public void setSubCaches(int subCaches) {
+        this.subCaches = subCaches;
     }
 
-    public int getBlocks_per_partition() {
-        return blocks_per_partition;
+    public int getPartitionsPerSubCache() {
+        return partitionsPerSubCache;
     }
 
-    public void setBlocks_per_partition(int blocks_per_partition) {
-        this.blocks_per_partition = blocks_per_partition;
+    public void setPartitionsPerSubCache(int partitionsPerSubCache) {
+        this.partitionsPerSubCache = partitionsPerSubCache;
     }
 
-    public int getBlock_capacity() {
-        return block_capacity;
+    public int getBlockCapacity() {
+        return blockCapacity;
     }
 
-    public void setBlock_capacity(int block_capacity) {
-        this.block_capacity = block_capacity;
+    public void setBlockCapacity(int blockCapacity) {
+        this.blockCapacity = blockCapacity;
+    }
+
+    public int getBlocksPerPartition() {
+        return blocksPerPartition;
+    }
+
+    public void setBlocksPerPartition(int blocksPerPartition) {
+        this.blocksPerPartition = blocksPerPartition;
     }
 }

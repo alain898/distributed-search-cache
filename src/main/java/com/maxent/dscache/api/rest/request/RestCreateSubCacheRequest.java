@@ -1,26 +1,22 @@
-package com.maxent.dscache.api.rest.response;
-
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+package com.maxent.dscache.api.rest.request;
 
 /**
- * Created by alain on 16/8/20.
+ * Created by alain on 16/8/26.
  */
-@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
-public class RestCreateCacheResponse extends RestCommonResponse {
-    String name;
-    String entryClassName;
-    int subCaches;
-    int partitionsPerSubCache;
-    int blockCapacity;
-    int blocksPerPartition;
+public class RestCreateSubCacheRequest {
 
-    public RestCreateCacheResponse() {
+    private String name;
+    private String entryClassName;
+    private int partitionsPerSubCache;
+    private int blockCapacity;
+    private int blocksPerPartition;
+
+    public RestCreateSubCacheRequest() {
     }
 
-    public RestCreateCacheResponse(String name, String entryClassName, int subCaches, int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
+    public RestCreateSubCacheRequest(String name, String entryClassName, int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
         this.name = name;
         this.entryClassName = entryClassName;
-        this.subCaches = subCaches;
         this.partitionsPerSubCache = partitionsPerSubCache;
         this.blockCapacity = blockCapacity;
         this.blocksPerPartition = blocksPerPartition;
@@ -40,14 +36,6 @@ public class RestCreateCacheResponse extends RestCommonResponse {
 
     public void setEntryClassName(String entryClassName) {
         this.entryClassName = entryClassName;
-    }
-
-    public int getSubCaches() {
-        return subCaches;
-    }
-
-    public void setSubCaches(int subCaches) {
-        this.subCaches = subCaches;
     }
 
     public int getPartitionsPerSubCache() {
