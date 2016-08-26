@@ -181,6 +181,8 @@ public class CacheClusterManager {
         cacheZnode.setVersion(cacheMeta.getVersion());
         cacheZnode.setEntryClassName(cacheMeta.getEntryClassName());
         cacheZnode.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
+        cacheZnode.setBlockCapacity(cacheMeta.getBlockCapacity());
+        cacheZnode.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
         zkClient.create().forPath(cacheZkPath);
         zkClient.setData().forPath(cacheZkPath, JsonUtils.toJson(cacheZnode).getBytes(Charsets.UTF_8));
 
