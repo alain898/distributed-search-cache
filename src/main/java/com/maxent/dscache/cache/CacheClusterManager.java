@@ -164,7 +164,7 @@ public class CacheClusterManager {
             ReplicationMeta meta = subCache.getReplicationMetas().get(0);
             Host host = meta.getHost();
             String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-            String path = "/cache/subcache";
+            String path = "/subcache";
             RestCreateCacheResponse createCacheResponse =
                     httpClient.post(url, path, new RestCreateCacheRequest(), RestCreateCacheResponse.class);
             if (createCacheResponse == null) {

@@ -14,11 +14,11 @@ public class SubCacheManager {
     private final Object lock = new Object();
     private Map<String, SubCache<ICacheEntry>> caches = new HashMap<>();
 
-    public void addCache(String name,
-                         String provider,
-                         int partitions,
-                         int blocks_per_partition,
-                         int block_capacity) throws CacheExistException {
+    public void addSubCache(String name,
+                            String provider,
+                            int partitions,
+                            int blocks_per_partition,
+                            int block_capacity) throws CacheExistException {
         Preconditions.checkArgument(StringUtils.isNotBlank(name), "name is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(provider), "provider is blank");
         Preconditions.checkArgument(partitions > 0, "provider is not positive");
@@ -40,4 +40,9 @@ public class SubCacheManager {
             caches.put(name, subCache);
         }
     }
+
+    public SubCache<ICacheEntry> getSubCache(String name) {
+        return caches.get(name);
+    }
+
 }
