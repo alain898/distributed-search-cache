@@ -9,6 +9,8 @@ public class CacheZnode {
 
     private String entryClassName;
     private int partitionsPerSubCache;
+    private int blockCapacity;
+    private int blocksPerPartition;
 
     public String getVersion() {
         return version;
@@ -40,5 +42,21 @@ public class CacheZnode {
 
     public void setPartitionsPerSubCache(int partitionsPerSubCache) {
         this.partitionsPerSubCache = partitionsPerSubCache;
+    }
+
+    public int getBlockCapacity() {
+        return blockCapacity;
+    }
+
+    public void setBlockCapacity(int blockCapacity) {
+        this.blockCapacity = blockCapacity;
+    }
+
+    public int getBlocksPerPartition() {
+        return blocksPerPartition;
+    }
+
+    public void setBlocksPerPartition(int blocksPerPartition) {
+        this.blocksPerPartition = blocksPerPartition;
     }
 }

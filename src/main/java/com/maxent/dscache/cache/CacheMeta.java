@@ -18,6 +18,8 @@ public class CacheMeta {
     private Class<ICacheEntry> entryClass;
 
     private List<SubCacheMeta> subCacheMetas;
+    private int blockCapacity;
+    private int blocksPerPartition;
     private int partitionsPerSubCache;
 
     public String getVersion() {
@@ -74,5 +76,21 @@ public class CacheMeta {
 
     public void setPartitionsPerSubCache(int partitionsPerSubCache) {
         this.partitionsPerSubCache = partitionsPerSubCache;
+    }
+
+    public int getBlockCapacity() {
+        return blockCapacity;
+    }
+
+    public void setBlockCapacity(int blockCapacity) {
+        this.blockCapacity = blockCapacity;
+    }
+
+    public int getBlocksPerPartition() {
+        return blocksPerPartition;
+    }
+
+    public void setBlocksPerPartition(int blocksPerPartition) {
+        this.blocksPerPartition = blocksPerPartition;
     }
 }
