@@ -5,6 +5,7 @@ import com.maxent.dscache.api.rest.response.RestCacheMatchResponse;
 import com.maxent.dscache.cache.*;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.http.HttpClient;
+import com.maxent.dscache.common.tools.JsonUtils;
 
 /**
  * Created by alain on 16/8/20.
@@ -44,6 +45,7 @@ public class CacheClient {
         TestCacheEntry testCacheEntry = new TestCacheEntry();
         testCacheEntry.setField1("field1");
         testCacheEntry.setField2("field2");
-        cacheClient.search("cache-test1", testCacheEntry);
+        CacheSearchResponse response = cacheClient.search("cache-test1", testCacheEntry);
+        System.out.println(JsonUtils.toJson(response));
     }
 }
