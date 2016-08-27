@@ -41,12 +41,20 @@ public class CacheClusterService {
 
     private CacheClusterMeta cacheCluster;
 
-    public void init() throws Exception {
-        RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
-        zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
-        zkClient.start();
+    public CacheClusterService() throws RuntimeException {
+        try {
+            RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+            zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
+            zkClient.start();
 
-        cacheCluster = getCacheClusterMeta();
+            cacheCluster = getCacheClusterMeta();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void close() {
+        zkClient.close();
     }
 
     /**
