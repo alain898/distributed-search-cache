@@ -29,7 +29,7 @@ public class CacheClusterService {
 
     private static final long DEFAULT_START_VERSION = 0;
 
-    private String zookeeperConnectionUrl = "";
+    private String zookeeperConnectionUrl = "127.0.0.1:2181";
 
     private CuratorFramework zkClient;
 
