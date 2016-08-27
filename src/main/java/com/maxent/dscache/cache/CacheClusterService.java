@@ -3,7 +3,9 @@ package com.maxent.dscache.cache;
 import com.google.common.base.Charsets;
 import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
+import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
+import com.maxent.dscache.cache.exceptions.CacheInitializeFailureException;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.tools.ClassUtils;
@@ -15,6 +17,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +41,7 @@ public class CacheClusterService {
     private final String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
     private final String HOST_PATH_PREFIX = "host_";
 
+    private final String CACHE_CLUSTER_INITIAL_VERSION = "0";
 
     private CacheClusterMeta cacheCluster;
 
@@ -46,6 +50,8 @@ public class CacheClusterService {
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
             zkClient.start();
+
+            initClusterIfNot();
 
             cacheCluster = getCacheClusterMeta();
         } catch (Exception e) {
@@ -282,6 +288,43 @@ public class CacheClusterService {
             }
         } finally {
             lock.release();
+        }
+    }
+
+    public void initClusterIfNot() throws CacheCheckFailureException, CacheInitializeFailureException {
+        try {
+            if (zkClient.checkExists().forPath(CACHE_CLUSTER_PATH) != null) {
+                return;
+            }
+        } catch (Exception e) {
+            throw new CacheCheckFailureException(
+                    String.format("failed to checkExists for path[%s]", CACHE_CLUSTER_PATH), e);
+        }
+
+        try {
+            try {
+                zkClient.create().forPath(CACHE_CLUSTER_PATH);
+                CacheClusterZnode cacheClusterZnode = new CacheClusterZnode();
+                cacheClusterZnode.setVersion(CACHE_CLUSTER_INITIAL_VERSION);
+                zkClient.setData().forPath(CACHE_CLUSTER_PATH,
+                        JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
+            } catch (KeeperException.NodeExistsException e) {
+                logger.warn(String.format("zookeeper node[%s] exist", CACHE_CLUSTER_PATH), e);
+            }
+
+            try {
+                zkClient.create().forPath(CACHES_PATH);
+            } catch (KeeperException.NodeExistsException e) {
+                logger.warn(String.format("zookeeper node[%s] exist", CACHES_PATH), e);
+            }
+
+            try {
+                zkClient.create().forPath(HOSTS_PATH);
+            } catch (KeeperException.NodeExistsException e) {
+                logger.warn(String.format("zookeeper node[%s] exist", HOSTS_PATH), e);
+            }
+        } catch (Exception e) {
+            throw new CacheInitializeFailureException("failed to check cluster", e);
         }
     }
 }
