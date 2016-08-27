@@ -29,12 +29,21 @@ public class CacheClient {
         Host host = subCacheMeta.getReplicationMetas().get(0).getHost();
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-        String path = "/cache/search";
+        String path = "/subcache";
         HttpClient httpClient = new HttpClient();
         RestCacheMatchResponse restCacheMatchResponse =
                 httpClient.post(url, path, new RestCacheMatchRequest(), RestCacheMatchResponse.class);
         return new CacheSearchResponse(
                 restCacheMatchResponse.getScores(),
                 restCacheMatchResponse.getEntries());
+    }
+
+    public static void main(String[] args) {
+        CacheClusterService clusterService = new CacheClusterService();
+        CacheClient cacheClient = new CacheClient(clusterService);
+        TestCacheEntry testCacheEntry = new TestCacheEntry();
+        testCacheEntry.setField1("field1");
+        testCacheEntry.setField2("field2");
+        cacheClient.search("cache-test1", testCacheEntry);
     }
 }
