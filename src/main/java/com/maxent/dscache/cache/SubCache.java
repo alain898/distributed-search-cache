@@ -18,8 +18,10 @@ import java.util.List;
  */
 public class SubCache<E extends ICacheEntry> {
     private final Class<E> cacheEntryClass;
-    private IPartitioner partitioner;
-    private List<IPartition<E>> partitions;
+    private final int partitionNumber;
+    private final IPartitioner partitioner;
+    private final List<IPartition<E>> partitions;
+
 
     public SubCache(Class<E> cacheEntryClass, int partitionNumber, int blockCapacity, long blockNumber) {
         Preconditions.checkNotNull(cacheEntryClass, "cacheEntryClass is null");
@@ -28,6 +30,7 @@ public class SubCache<E extends ICacheEntry> {
         Preconditions.checkArgument(blockNumber > 0, "blockNumber must be positive");
 
         this.cacheEntryClass = cacheEntryClass;
+        this.partitionNumber = partitionNumber;
         this.partitioner = new HashPartitioner(partitionNumber);
         this.partitions = createPartitions(partitionNumber, blockCapacity, blockNumber);
     }
@@ -39,6 +42,7 @@ public class SubCache<E extends ICacheEntry> {
         }
         return partitions;
     }
+
 
     public Class<E> getCacheEntryClass() {
         return cacheEntryClass;

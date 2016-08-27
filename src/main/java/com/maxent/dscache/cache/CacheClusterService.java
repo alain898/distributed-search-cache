@@ -24,8 +24,8 @@ import java.util.List;
 /**
  * Created by alain on 16/8/20.
  */
-public class CacheClusterManager {
-    private static final Logger logger = LoggerFactory.getLogger(CacheClusterManager.class);
+public class CacheClusterService {
+    private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
 
     private static final long DEFAULT_START_VERSION = 0;
 
@@ -33,9 +33,10 @@ public class CacheClusterManager {
 
     private CuratorFramework zkClient;
 
-    private String CACHE_CLUSTER_PATH = "/cache_cluster";
-    private String CACHES_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/caches");
-    private String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
+    private final String CACHE_CLUSTER_PATH = "/cache_cluster";
+    private final String CACHES_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/caches");
+    private final String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
+    private final String HOST_PATH_PREFIX = "host_";
 
 
     private CacheClusterMeta cacheCluster;
@@ -210,7 +211,7 @@ public class CacheClusterManager {
         InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
         lock.acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = getCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
             for (CacheMeta cache : caches) {
@@ -241,11 +242,36 @@ public class CacheClusterManager {
             cacheMeta.setPartitionsPerSubCache(partitionsPerSubCache);
 
 
+            // 先改变集群的状态
             createCacheInCluster(cacheMeta);
 
+            // 再改变集群在zookeeper中的状态
             doCreateCache(cacheMeta);
 
 
+        } finally {
+            lock.release();
+        }
+    }
+
+    public void doAddHost(Host host) throws Exception {
+        String hostPath = StringUtils.join(
+                HOSTS_PATH, "/", String.format("%s%d", HOST_PATH_PREFIX, host.getId()));
+        zkClient.create().forPath(hostPath);
+    }
+
+    public void addHosts(List<Host> newHosts) throws Exception {
+        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
+        lock.acquire();
+        try {
+            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            List<Host> hosts = cacheClusterMeta.getHosts();
+            int newHostIdStart = hosts.size();
+            for (int i = 0; i < newHosts.size(); i++) {
+                Host newHost = newHosts.get(i);
+                newHost.setId(newHostIdStart + i);
+                doAddHost(newHost);
+            }
         } finally {
             lock.release();
         }

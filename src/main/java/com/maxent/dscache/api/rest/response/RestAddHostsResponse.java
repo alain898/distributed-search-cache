@@ -7,13 +7,13 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  */
 @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 public class RestAddHostsResponse extends RestCommonResponse {
-    private String message;
+    private String result;
 
-    public String getMessage() {
-        return message;
+    public String getResult() {
+        return result;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setResult(String result) {
+        this.result = result;
     }
 }

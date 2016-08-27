@@ -1,19 +1,13 @@
 package com.maxent.dscache.api.rest.controller;
 
-import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
-import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.ICacheEntry;
-import com.maxent.dscache.cache.SubCache;
-import com.maxent.dscache.cache.SubCacheManager;
-import com.maxent.dscache.cache.TestCacheEntry;
+import com.maxent.dscache.cache.SubCacheService;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
-import com.maxent.dscache.common.tools.ClassUtils;
-import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,17 +25,17 @@ import java.util.List;
  */
 @Singleton
 @Path("/subcache")
-public class CacheController {
-    private static final Logger logger = LoggerFactory.getLogger(CacheController.class);
+public class SubCacheController {
+    private static final Logger logger = LoggerFactory.getLogger(SubCacheController.class);
 
-    private SubCacheManager subCacheManager = new SubCacheManager();
+    private SubCacheService subCacheService = new SubCacheService();
 
     @POST
     public RestCreateSubCacheResponse create(@Context final HttpServletResponse httpServletResponse,
                                              final RestCreateSubCacheRequest request) {
 
         try {
-            subCacheManager.addSubCache(
+            subCacheService.createSubCache(
                     request.getName(),
                     request.getEntryClassName(),
                     request.getPartitionsPerSubCache(),
@@ -84,32 +78,38 @@ public class CacheController {
 
     @POST
     @Path("/search")
-    public RestSubCacheSearchResponse match(@Context final HttpServletResponse httpServletResponse,
-                                            final RestSubCacheSearchRequest request) {
-        RestSubCacheSearchResponse response = new RestSubCacheSearchResponse();
-        response.setError("hello");
+    public RestSubCacheSearchResponse search(@Context final HttpServletResponse httpServletResponse,
+                                             final RestSubCacheSearchRequest request) {
 
-        String cacheName = request.getCache_name();
+        try {
+            List<Pair<ICacheEntry, Double>> results = subCacheService.match(
+                    request.getCache_name(),
+                    request.getQuery_entry());
 
-        SubCache<ICacheEntry> subCache = subCacheManager.getSubCache(cacheName);
-        if (subCache == null) {
-            return RestHelper.createErrorResponse(RestSubCacheSearchResponse.class, "not exist");
+            List<ICacheEntry> entries = new ArrayList<>();
+            List<Double> scores = new ArrayList<>();
+            for (Pair<ICacheEntry, Double> r : results) {
+                entries.add(r.getLeft());
+                scores.add(r.getRight());
+            }
+
+            RestSubCacheSearchResponse response = new RestSubCacheSearchResponse();
+            response.setEntries(entries);
+            response.setScores(scores);
+
+            return RestHelper.doResponse(
+                    httpServletResponse,
+                    HttpServletResponse.SC_CREATED,
+                    response);
+        } catch (Exception e) {
+            String errInfo = String.format(
+                    "failed to create cache[%s], exception[%s]",
+                    request.getCache_name(), e.getMessage());
+            logger.error(errInfo, e);
+            return RestHelper.doResponse(
+                    httpServletResponse,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    RestHelper.createErrorResponse(RestSubCacheSearchResponse.class, errInfo));
         }
-
-        Class<ICacheEntry> cacheEntryClass = subCache.getCacheEntryClass();
-
-        ICacheEntry queryEntry = JsonUtils.fromMap(request.getQuery_entry(), cacheEntryClass);
-
-        List<Pair<ICacheEntry, Double>> results = subCache.match(queryEntry);
-
-        List<ICacheEntry> entries = new ArrayList<>();
-        List<Double> scores = new ArrayList<>();
-        for (Pair<ICacheEntry, Double> r : results) {
-            entries.add(r.getLeft());
-            scores.add(r.getRight());
-        }
-        response.setEntries(entries);
-        response.setScores(scores);
-        return response;
     }
 }

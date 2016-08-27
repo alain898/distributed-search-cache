@@ -11,9 +11,9 @@ import com.maxent.dscache.common.http.HttpClient;
  */
 public class CacheClient {
 
-    private CacheClusterManager clusterCenter;
+    private CacheClusterService clusterCenter;
 
-    public CacheClient(CacheClusterManager clusterCenter) {
+    public CacheClient(CacheClusterService clusterCenter) {
         this.clusterCenter = clusterCenter;
     }
 
@@ -29,7 +29,7 @@ public class CacheClient {
         Host host = subCacheMeta.getReplicationMetas().get(0).getHost();
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-        String path = "/cache/match";
+        String path = "/cache/search";
         HttpClient httpClient = new HttpClient();
         RestCacheMatchResponse restCacheMatchResponse =
                 httpClient.post(url, path, new RestCacheMatchRequest(), RestCacheMatchResponse.class);
