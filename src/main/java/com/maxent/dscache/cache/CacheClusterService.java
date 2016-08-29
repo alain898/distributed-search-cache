@@ -2,7 +2,9 @@ package com.maxent.dscache.cache;
 
 import com.google.common.base.Charsets;
 import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
+import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
+import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
 import com.maxent.dscache.cache.exceptions.CacheHostExistException;
@@ -185,8 +187,15 @@ public class CacheClusterService {
             Host host = meta.getHost();
             String url = String.format("http://%s:%d", host.getHost(), host.getPort());
             String path = "/subcache";
-            RestCreateCacheResponse createCacheResponse =
-                    httpClient.post(url, path, new RestCreateCacheRequest(), RestCreateCacheResponse.class);
+            RestCreateSubCacheRequest restCreateSubCacheRequest = new RestCreateSubCacheRequest();
+            restCreateSubCacheRequest.setName(cacheMeta.getName());
+            restCreateSubCacheRequest.setEntryClassName(cacheMeta.getEntryClassName());
+            restCreateSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+            restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
+            restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
+            restCreateSubCacheRequest.setBlockCapacity(cacheMeta.getBlockCapacity());
+            RestCreateSubCacheResponse createCacheResponse =
+                    httpClient.post(url, path, restCreateSubCacheRequest, RestCreateSubCacheResponse.class);
             if (createCacheResponse == null) {
                 throw new RuntimeException(String.format("failed to create subcache[%s]", JsonUtils.toJson(subCache)));
             }
@@ -225,7 +234,9 @@ public class CacheClusterService {
         }
     }
 
-    public void createCache(String name, String entryClassName, int subCaches, int partitionsPerSubCache)
+    public void createCache(String name, String entryClassName,
+                            int subCaches, int partitionsPerSubCache,
+                            int blockCapacity, int blocksPerPartition)
             throws Exception {
         InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
         lock.acquire();
@@ -244,6 +255,8 @@ public class CacheClusterService {
             cacheMeta.setName(name);
             cacheMeta.setEntryClassName(entryClassName);
             cacheMeta.setEntryClass(ClassUtils.loadClass(entryClassName, ICacheEntry.class));
+            cacheMeta.setBlockCapacity(blockCapacity);
+            cacheMeta.setBlocksPerPartition(blocksPerPartition);
 
             List<SubCacheMeta> subCacheMetas = new ArrayList<>(subCaches);
             for (int i = 0; i < subCaches; i++) {

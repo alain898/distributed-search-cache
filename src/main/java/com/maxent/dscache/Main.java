@@ -26,7 +26,7 @@ public class Main implements Daemon {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     private static final String DEFAULT_REST_SERVER_IP = "127.0.0.1";
-    private static final int DEFAULT_REST_SERVER_PORT = 2222;
+    private static final int DEFAULT_REST_SERVER_PORT = 5232;
     private Server server;
 
     private String ip;

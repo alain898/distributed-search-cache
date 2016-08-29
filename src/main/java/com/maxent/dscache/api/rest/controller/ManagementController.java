@@ -66,7 +66,9 @@ public class ManagementController {
                     request.getName(),
                     request.getEntryClassName(),
                     request.getSubCaches(),
-                    request.getPartitionsPerSubCache());
+                    request.getPartitionsPerSubCache(),
+                    request.getBlocksPerPartition(),
+                    request.getBlockCapacity());
             RestCreateCacheResponse response = new RestCreateCacheResponse();
             response.setName(request.getName());
             return response;
