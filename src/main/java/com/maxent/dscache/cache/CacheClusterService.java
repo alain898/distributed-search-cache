@@ -1,9 +1,7 @@
 package com.maxent.dscache.cache;
 
 import com.google.common.base.Charsets;
-import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
-import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
