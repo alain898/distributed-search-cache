@@ -14,9 +14,12 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,7 +33,12 @@ public class SubCacheController {
 
     private SubCacheService subCacheService = new SubCacheService();
 
+    @Context
+    private HttpServletResponse httpServletResponse2;
+
     @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public RestCreateSubCacheResponse create(@Context final HttpServletResponse httpServletResponse,
                                              final RestCreateSubCacheRequest request) {
 
@@ -42,32 +50,24 @@ public class SubCacheController {
                     request.getPartitionsPerSubCache(),
                     request.getBlocksPerPartition(),
                     request.getBlockCapacity());
-            return RestHelper.doResponse(
-                    httpServletResponse,
-                    HttpServletResponse.SC_CREATED,
-                    new RestCreateSubCacheResponse(
-                            request.getName(),
-                            request.getEntryClassName(),
-                            request.getSubCacheId(),
-                            request.getPartitionsPerSubCache(),
-                            request.getBlocksPerPartition(),
-                            request.getBlockCapacity()));
+
+            return new RestCreateSubCacheResponse(
+                    request.getName(),
+                    request.getEntryClassName(),
+                    request.getSubCacheId(),
+                    request.getPartitionsPerSubCache(),
+                    request.getBlocksPerPartition(),
+                    request.getBlockCapacity());
         } catch (CacheExistException e) {
             String errInfo = String.format("cache[%s] already exist", request.getName());
             logger.warn(errInfo, e);
-            return RestHelper.doResponse(
-                    httpServletResponse,
-                    HttpServletResponse.SC_OK,
-                    RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo));
+            return RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo);
         } catch (Exception e) {
             String errInfo = String.format(
                     "failed to create cache[%s], exception[%s]",
                     request.getName(), e.getMessage());
             logger.error(errInfo, e);
-            return RestHelper.doResponse(
-                    httpServletResponse,
-                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo));
+            return RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo);
         }
     }
 
@@ -80,6 +80,8 @@ public class SubCacheController {
 
     @POST
     @Path("/search")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public RestSubCacheSearchResponse search(@Context final HttpServletResponse httpServletResponse,
                                              final RestSubCacheSearchRequest request) {
 
@@ -100,19 +102,13 @@ public class SubCacheController {
             response.setEntries(entries);
             response.setScores(scores);
 
-            return RestHelper.doResponse(
-                    httpServletResponse,
-                    HttpServletResponse.SC_CREATED,
-                    response);
+            return response;
         } catch (Exception e) {
             String errInfo = String.format(
                     "failed to create cache[%s], exception[%s]",
                     request.getCacheName(), e.getMessage());
             logger.error(errInfo, e);
-            return RestHelper.doResponse(
-                    httpServletResponse,
-                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    RestHelper.createErrorResponse(RestSubCacheSearchResponse.class, errInfo));
+            return RestHelper.createErrorResponse(RestSubCacheSearchResponse.class, errInfo);
         }
     }
 }

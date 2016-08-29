@@ -192,6 +192,7 @@ public class CacheClusterService {
             restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
             restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
             restCreateSubCacheRequest.setBlockCapacity(cacheMeta.getBlockCapacity());
+            logger.info(JsonUtils.toJson(restCreateSubCacheRequest));
             RestCreateSubCacheResponse createCacheResponse =
                     httpClient.post(url, path, restCreateSubCacheRequest, RestCreateSubCacheResponse.class);
             if (createCacheResponse == null) {

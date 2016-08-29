@@ -43,10 +43,7 @@ public class ManagementController {
             cacheClusterService.addHosts(newHosts);
             RestAddHostsResponse response = new RestAddHostsResponse();
             response.setResult("success");
-            return RestHelper.doResponse(
-                    httpServletResponse,
-                    HttpServletResponse.SC_CREATED,
-                    response);
+            return response;
         } catch (Exception e) {
             logger.error("createCache failed", e);
             return RestHelper.createErrorResponse(RestAddHostsResponse.class,
