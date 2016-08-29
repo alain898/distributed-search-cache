@@ -231,7 +231,7 @@ public class CacheClusterService {
 
     private void doCreateCache(CacheMeta cacheMeta) throws Exception {
         String name = cacheMeta.getName();
-        String cacheZkPath = StringUtils.join(CACHE_CLUSTER_PATH, "/", name);
+        String cacheZkPath = StringUtils.join(CACHES_PATH, "/", name);
         CacheZnode cacheZnode = new CacheZnode();
         cacheZnode.setName(cacheMeta.getName());
         cacheZnode.setVersion(cacheMeta.getVersion());
