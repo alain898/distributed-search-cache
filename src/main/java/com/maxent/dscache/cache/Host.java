@@ -47,4 +47,22 @@ public class Host {
     public void setPort(int port) {
         this.port = port;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Host host1 = (Host) o;
+
+        return port == host1.port && host.equals(host1.host);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = host.hashCode();
+        result = 31 * result + port;
+        return result;
+    }
 }

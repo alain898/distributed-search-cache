@@ -5,6 +5,7 @@ import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
+import com.maxent.dscache.cache.exceptions.CacheHostExistException;
 import com.maxent.dscache.cache.exceptions.CacheInitializeFailureException;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
@@ -285,6 +286,13 @@ public class CacheClusterService {
         try {
             CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
+            for (Host newHost : newHosts) {
+                if (hosts.contains(newHost)) {
+                    throw new CacheHostExistException(String.format(
+                            "host[%s] already exist", JsonUtils.toJson(newHost)));
+                }
+            }
+
             int newHostIdStart = hosts.size();
             for (int i = 0; i < newHosts.size(); i++) {
                 Host newHost = newHosts.get(i);
