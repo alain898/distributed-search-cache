@@ -2,6 +2,7 @@ package com.maxent.dscache.cache;
 
 import com.google.common.base.Preconditions;
 import com.maxent.dscache.cache.exceptions.CacheCreateFailureException;
+import com.maxent.dscache.cache.exceptions.CacheDeleteFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
 import com.maxent.dscache.cache.exceptions.CacheMatchFailureException;
 import com.maxent.dscache.common.tools.JsonUtils;
@@ -57,28 +58,19 @@ public class SubCacheService {
 
     public void deleteSubCache(final String cacheName,
                                final String subCacheId)
-            throws CacheExistException, CacheCreateFailureException {
+            throws CacheDeleteFailureException {
 
         Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
 
         synchronized (lock) {
-            if (!caches.containsKey(cacheName) || caches.get(cacheName).containsKey(subCacheId)) {
-                throw new CacheExistException(String.format("cache[%s] subCache[%s] exist", cacheName, subCacheId));
+            Map<String, SubCache<ICacheEntry>> subCaches = caches.get(cacheName);
+            if (subCaches != null) {
+                SubCache<ICacheEntry> subCache = subCaches.remove(subCacheId);
+                subCache.clear();
             }
-
-            try {
-                Map<String, SubCache<ICacheEntry>> subCaches = caches.get(cacheName);
-                if (subCaches != null) {
-                    SubCache<ICacheEntry> subCache = subCaches.remove(subCacheId);
-                    subCache.clear();
-                }
-                if (subCaches == null || subCaches.size() == 0) {
-                    caches.remove(cacheName);
-                }
-            } catch (Exception e) {
-                throw new CacheCreateFailureException(String.format(
-                        "cacheName[%s] subCache[%s] delete failed", cacheName, subCacheId), e);
+            if (subCaches == null || subCaches.size() == 0) {
+                caches.remove(cacheName);
             }
         }
     }

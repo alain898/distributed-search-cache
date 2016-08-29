@@ -9,6 +9,7 @@ import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.ICacheEntry;
 import com.maxent.dscache.cache.SubCacheService;
+import com.maxent.dscache.cache.exceptions.CacheDeleteFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -80,24 +81,13 @@ public class SubCacheController {
             subCacheService.deleteSubCache(
                     request.getName(),
                     request.getSubCacheId());
-
-            return new RestCreateSubCacheResponse(
-                    request.getName(),
-                    request.getEntryClassName(),
-                    request.getSubCacheId(),
-                    request.getPartitionsPerSubCache(),
-                    request.getBlocksPerPartition(),
-                    request.getBlockCapacity());
-        } catch (CacheExistException e) {
-            String errInfo = String.format("cache[%s] already exist", request.getName());
-            logger.warn(errInfo, e);
-            return RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo);
+            return new RestDeleteSubCacheResponse("success");
         } catch (Exception e) {
             String errInfo = String.format(
-                    "failed to create cache[%s], exception[%s]",
+                    "failed to delete cache[%s], exception[%s]",
                     request.getName(), e.getMessage());
             logger.error(errInfo, e);
-            return RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo);
+            return RestHelper.createErrorResponse(RestDeleteSubCacheResponse.class, errInfo);
         }
     }
 
