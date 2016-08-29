@@ -203,7 +203,7 @@ public class CacheClusterService {
                     throw new CacheCreateFailureException(String.format(
                             "failed to create subcache[%s]", JsonUtils.toJson(subCache)));
                 }
-                if (createCacheResponse.getError() == null) {
+                if (createCacheResponse.getError() != null) {
                     throw new CacheCreateFailureException(String.format(
                             "failed to create subcache[%s], error[%s]",
                             JsonUtils.toJson(subCache), createCacheResponse.getError()));
