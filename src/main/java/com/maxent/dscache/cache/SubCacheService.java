@@ -17,51 +17,57 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SubCacheService {
     private final Object lock = new Object();
-    private Map<String, SubCache<ICacheEntry>> caches = new ConcurrentHashMap<>();
+    private Map<String, Map<String, SubCache<ICacheEntry>>> caches = new ConcurrentHashMap<>();
 
-    public void createSubCache(final String name,
+    public void createSubCache(final String cacheName,
                                final String entryClassName,
+                               final String subCacheId,
                                final int partitions,
                                final int blocks_per_partition,
                                final int block_capacity)
             throws CacheExistException, CacheCreateFailureException {
 
-        Preconditions.checkArgument(StringUtils.isNotBlank(name), "name is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(entryClassName), "entryClassName is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
         Preconditions.checkArgument(partitions > 0, "partitions is not positive");
         Preconditions.checkArgument(blocks_per_partition > 0, "blocks_per_partition is not positive");
         Preconditions.checkArgument(block_capacity > 0, "block_capacity is not positive");
 
         synchronized (lock) {
-            if (caches.containsKey(name)) {
-                throw new CacheExistException(String.format("subCache[%s] exist", name));
+            if (caches.containsKey(cacheName) && caches.get(cacheName).containsKey(subCacheId)) {
+                throw new CacheExistException(String.format("cache[%s] subCache[%s] exist", cacheName, subCacheId));
             }
 
             try {
                 SubCache<ICacheEntry> subCache = SubCacheFactory.newCache(
-                        name,
+                        cacheName,
                         entryClassName,
                         partitions,
                         blocks_per_partition,
                         block_capacity);
-                caches.put(name, subCache);
+                caches.putIfAbsent(cacheName, new ConcurrentHashMap<>());
+                caches.get(cacheName).put(subCacheId, subCache);
             } catch (Exception e) {
-                throw new CacheCreateFailureException(String.format("subCache[%s] create failed", name), e);
+                throw new CacheCreateFailureException(String.format("subCache[%s] create failed", cacheName), e);
             }
         }
     }
 
-    public SubCache<ICacheEntry> getSubCache(String name) {
-        Preconditions.checkArgument(StringUtils.isNotBlank(name), "name is blank");
+    public SubCache<ICacheEntry> getSubCache(String cacheName, String subCacheId) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
 
-        return caches.get(name);
+        return caches.getOrDefault(cacheName, new ConcurrentHashMap<>()).get(subCacheId);
     }
 
-    public List<Pair<ICacheEntry, Double>> match(String cacheName, Map query) throws CacheMatchFailureException {
+    public List<Pair<ICacheEntry, Double>> match(String cacheName, String subCacheId, Map query)
+            throws CacheMatchFailureException {
 
-        SubCache<ICacheEntry> subCache = caches.get(cacheName);
+        SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
         if (subCache == null) {
-            throw new CacheMatchFailureException(String.format("cannot find subCache[%s]", cacheName));
+            throw new CacheMatchFailureException(String.format(
+                    "cannot find cache[%s], subCache[%s]", cacheName, subCacheId));
         }
 
         Class<ICacheEntry> cacheEntryClass = subCache.getCacheEntryClass();

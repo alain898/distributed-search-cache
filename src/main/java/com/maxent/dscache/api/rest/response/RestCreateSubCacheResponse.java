@@ -6,6 +6,7 @@ package com.maxent.dscache.api.rest.response;
 public class RestCreateSubCacheResponse extends RestCommonResponse {
     private String name;
     private String entryClassName;
+    private String subCacheId;
     private int partitionsPerSubCache;
     private int blockCapacity;
     private int blocksPerPartition;
@@ -13,9 +14,11 @@ public class RestCreateSubCacheResponse extends RestCommonResponse {
     public RestCreateSubCacheResponse() {
     }
 
-    public RestCreateSubCacheResponse(String name, String entryClassName, int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
+    public RestCreateSubCacheResponse(String name, String entryClassName, String subCacheId,
+                                      int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
         this.name = name;
         this.entryClassName = entryClassName;
+        this.subCacheId = subCacheId;
         this.partitionsPerSubCache = partitionsPerSubCache;
         this.blockCapacity = blockCapacity;
         this.blocksPerPartition = blocksPerPartition;
@@ -59,5 +62,13 @@ public class RestCreateSubCacheResponse extends RestCommonResponse {
 
     public void setBlocksPerPartition(int blocksPerPartition) {
         this.blocksPerPartition = blocksPerPartition;
+    }
+
+    public String getSubCacheId() {
+        return subCacheId;
+    }
+
+    public void setSubCacheId(String subCacheId) {
+        this.subCacheId = subCacheId;
     }
 }

@@ -6,22 +6,31 @@ import java.util.Map;
  * Created by alain on 16/8/26.
  */
 public class RestSubCacheSearchRequest {
-    private String cache_name;
-    private Map query_entry;
+    private String cacheName;
+    private String subCacheId;
+    private Map queryEntry;
 
-    public String getCache_name() {
-        return cache_name;
+    public String getCacheName() {
+        return cacheName;
     }
 
-    public void setCache_name(String cache_name) {
-        this.cache_name = cache_name;
+    public void setCacheName(String cacheName) {
+        this.cacheName = cacheName;
     }
 
-    public Map getQuery_entry() {
-        return query_entry;
+    public Map getQueryEntry() {
+        return queryEntry;
     }
 
-    public void setQuery_entry(Map query_entry) {
-        this.query_entry = query_entry;
+    public void setQueryEntry(Map queryEntry) {
+        this.queryEntry = queryEntry;
+    }
+
+    public String getSubCacheId() {
+        return subCacheId;
+    }
+
+    public void setSubCacheId(String subCacheId) {
+        this.subCacheId = subCacheId;
     }
 }

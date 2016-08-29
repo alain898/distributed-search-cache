@@ -38,6 +38,7 @@ public class SubCacheController {
             subCacheService.createSubCache(
                     request.getName(),
                     request.getEntryClassName(),
+                    request.getSubCacheId(),
                     request.getPartitionsPerSubCache(),
                     request.getBlocksPerPartition(),
                     request.getBlockCapacity());
@@ -47,6 +48,7 @@ public class SubCacheController {
                     new RestCreateSubCacheResponse(
                             request.getName(),
                             request.getEntryClassName(),
+                            request.getSubCacheId(),
                             request.getPartitionsPerSubCache(),
                             request.getBlocksPerPartition(),
                             request.getBlockCapacity()));
@@ -83,8 +85,9 @@ public class SubCacheController {
 
         try {
             List<Pair<ICacheEntry, Double>> results = subCacheService.match(
-                    request.getCache_name(),
-                    request.getQuery_entry());
+                    request.getCacheName(),
+                    request.getSubCacheId(),
+                    request.getQueryEntry());
 
             List<ICacheEntry> entries = new ArrayList<>();
             List<Double> scores = new ArrayList<>();
@@ -104,7 +107,7 @@ public class SubCacheController {
         } catch (Exception e) {
             String errInfo = String.format(
                     "failed to create cache[%s], exception[%s]",
-                    request.getCache_name(), e.getMessage());
+                    request.getCacheName(), e.getMessage());
             logger.error(errInfo, e);
             return RestHelper.doResponse(
                     httpServletResponse,

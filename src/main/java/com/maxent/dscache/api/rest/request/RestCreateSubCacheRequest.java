@@ -7,6 +7,7 @@ public class RestCreateSubCacheRequest {
 
     private String name;
     private String entryClassName;
+    private String subCacheId;
     private int partitionsPerSubCache;
     private int blockCapacity;
     private int blocksPerPartition;
@@ -14,9 +15,11 @@ public class RestCreateSubCacheRequest {
     public RestCreateSubCacheRequest() {
     }
 
-    public RestCreateSubCacheRequest(String name, String entryClassName, int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
+    public RestCreateSubCacheRequest(String name, String entryClassName, String subCacheId,
+                                     int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
         this.name = name;
         this.entryClassName = entryClassName;
+        this.subCacheId = subCacheId;
         this.partitionsPerSubCache = partitionsPerSubCache;
         this.blockCapacity = blockCapacity;
         this.blocksPerPartition = blocksPerPartition;
@@ -60,5 +63,13 @@ public class RestCreateSubCacheRequest {
 
     public void setBlocksPerPartition(int blocksPerPartition) {
         this.blocksPerPartition = blocksPerPartition;
+    }
+
+    public String getSubCacheId() {
+        return subCacheId;
+    }
+
+    public void setSubCacheId(String subCacheId) {
+        this.subCacheId = subCacheId;
     }
 }
