@@ -31,7 +31,8 @@ public class HttpClient {
                       MediaType requestMediaType, Object request,
                       MediaType responseMediaType, Class<T> responseClass) {
 
-        return client.get().target(url)
+        return client.get()
+                .target(url)
                 .path(path)
                 .request(responseMediaType)
                 .post(Entity.entity(request, requestMediaType), responseClass);

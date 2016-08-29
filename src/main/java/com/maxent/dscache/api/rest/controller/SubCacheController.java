@@ -37,6 +37,7 @@ public class SubCacheController {
     private HttpServletResponse httpServletResponse2;
 
     @POST
+    @Path("/create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestCreateSubCacheResponse create(@Context final HttpServletResponse httpServletResponse,
@@ -71,7 +72,8 @@ public class SubCacheController {
         }
     }
 
-    @DELETE
+    @POST
+    @Path("/delete")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestDeleteSubCacheResponse delete(@Context final HttpServletResponse httpServletResponse,

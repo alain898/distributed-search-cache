@@ -2,7 +2,9 @@ package com.maxent.dscache.cache;
 
 import com.google.common.base.Charsets;
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
+import com.maxent.dscache.api.rest.request.RestDeleteSubCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
+import com.maxent.dscache.api.rest.response.RestDeleteSubCacheResponse;
 import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
@@ -183,7 +185,7 @@ public class CacheClusterService {
                 ReplicationMeta meta = subCache.getReplicationMetas().get(0);
                 Host host = meta.getHost();
                 String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-                String path = "/subcache";
+                String path = "/subcache/create";
                 RestCreateSubCacheRequest restCreateSubCacheRequest = new RestCreateSubCacheRequest();
                 restCreateSubCacheRequest.setName(cacheMeta.getName());
                 restCreateSubCacheRequest.setEntryClassName(cacheMeta.getEntryClassName());
@@ -191,7 +193,6 @@ public class CacheClusterService {
                 restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
                 restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
                 restCreateSubCacheRequest.setBlockCapacity(cacheMeta.getBlockCapacity());
-                logger.info(JsonUtils.toJson(restCreateSubCacheRequest));
                 RestCreateSubCacheResponse createCacheResponse =
                         httpClient.post(url, path, restCreateSubCacheRequest, RestCreateSubCacheResponse.class);
                 if (createCacheResponse == null) {
@@ -205,7 +206,17 @@ public class CacheClusterService {
                 }
             }
         } catch (Exception e) {
-
+            for (SubCacheMeta subCache : subCaches) {
+                ReplicationMeta meta = subCache.getReplicationMetas().get(0);
+                Host host = meta.getHost();
+                String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+                String path = "/subcache/delete";
+                RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
+                restDeleteSubCacheRequest.setName(cacheMeta.getName());
+                restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+                httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
+            }
+            throw e;
         }
     }
 
