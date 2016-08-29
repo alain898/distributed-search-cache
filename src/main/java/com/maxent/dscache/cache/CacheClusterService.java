@@ -276,6 +276,7 @@ public class CacheClusterService {
         String hostPath = StringUtils.join(
                 HOSTS_PATH, "/", String.format("%s%d", HOST_PATH_PREFIX, host.getId()));
         zkClient.create().forPath(hostPath);
+        zkClient.setData().forPath(hostPath, JsonUtils.toJson(host).getBytes(Charsets.UTF_8));
     }
 
     public void addHosts(List<Host> newHosts) throws Exception {
