@@ -1,8 +1,11 @@
 package com.maxent.dscache.api.rest.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 /**
  * Created by alain on 16/8/26.
  */
+@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 public class RestCreateSubCacheResponse extends RestCommonResponse {
     private String name;
     private String entryClassName;
