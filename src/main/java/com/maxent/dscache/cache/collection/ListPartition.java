@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -82,6 +83,16 @@ public class ListPartition<E> implements IPartition<E> {
             return lastIndex;
         } finally {
             lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public void clear() {
+        lock.writeLock().lock();
+        try {
+            blocks.clear();
+        }finally {
+            lock.writeLock().unlock();
         }
     }
 }

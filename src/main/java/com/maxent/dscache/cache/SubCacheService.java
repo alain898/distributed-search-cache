@@ -49,7 +49,36 @@ public class SubCacheService {
                 caches.putIfAbsent(cacheName, new ConcurrentHashMap<>());
                 caches.get(cacheName).put(subCacheId, subCache);
             } catch (Exception e) {
-                throw new CacheCreateFailureException(String.format("subCache[%s] create failed", cacheName), e);
+                throw new CacheCreateFailureException(String.format(
+                        "cacheName[%s] subCache[%s] create failed", cacheName, subCacheId), e);
+            }
+        }
+    }
+
+    public void deleteSubCache(final String cacheName,
+                               final String subCacheId)
+            throws CacheExistException, CacheCreateFailureException {
+
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
+
+        synchronized (lock) {
+            if (!caches.containsKey(cacheName) || caches.get(cacheName).containsKey(subCacheId)) {
+                throw new CacheExistException(String.format("cache[%s] subCache[%s] exist", cacheName, subCacheId));
+            }
+
+            try {
+                Map<String, SubCache<ICacheEntry>> subCaches = caches.get(cacheName);
+                if (subCaches != null) {
+                    SubCache<ICacheEntry> subCache = subCaches.remove(subCacheId);
+                    subCache.clear();
+                }
+                if (subCaches == null || subCaches.size() == 0) {
+                    caches.remove(cacheName);
+                }
+            } catch (Exception e) {
+                throw new CacheCreateFailureException(String.format(
+                        "cacheName[%s] subCache[%s] delete failed", cacheName, subCacheId), e);
             }
         }
     }

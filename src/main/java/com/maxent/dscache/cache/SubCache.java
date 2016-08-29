@@ -80,6 +80,11 @@ public class SubCache<E extends ICacheEntry> {
         return Lists.newArrayList(Pair.of(maxScoreEntry, maxScore));
     }
 
+    public void clear() {
+        partitions.forEach(IPartition::clear);
+        partitions.clear();
+    }
+
     private boolean isEqualKey(String key1, String key2) {
         return StringUtils.equals(key1, key2);
     }

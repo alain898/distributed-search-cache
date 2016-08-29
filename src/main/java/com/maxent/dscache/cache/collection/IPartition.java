@@ -9,4 +9,6 @@ public interface IPartition<E> {
     E get(long index);
 
     long getLastIndex();
+
+    void clear();
 }

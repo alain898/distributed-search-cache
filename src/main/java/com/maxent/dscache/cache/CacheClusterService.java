@@ -3,10 +3,7 @@ package com.maxent.dscache.cache;
 import com.google.common.base.Charsets;
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
-import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
-import com.maxent.dscache.cache.exceptions.CacheExistException;
-import com.maxent.dscache.cache.exceptions.CacheHostExistException;
-import com.maxent.dscache.cache.exceptions.CacheInitializeFailureException;
+import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.tools.ClassUtils;
@@ -177,27 +174,38 @@ public class CacheClusterService {
         return null;
     }
 
-    private void createCacheInCluster(CacheMeta cacheMeta) {
+    private void createSubCachesInCluster(CacheMeta cacheMeta) throws CacheCreateFailureException {
         HttpClient httpClient = new HttpClient();
         List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
-        for (SubCacheMeta subCache : subCaches) {
-            ReplicationMeta meta = subCache.getReplicationMetas().get(0);
-            Host host = meta.getHost();
-            String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-            String path = "/subcache";
-            RestCreateSubCacheRequest restCreateSubCacheRequest = new RestCreateSubCacheRequest();
-            restCreateSubCacheRequest.setName(cacheMeta.getName());
-            restCreateSubCacheRequest.setEntryClassName(cacheMeta.getEntryClassName());
-            restCreateSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
-            restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
-            restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
-            restCreateSubCacheRequest.setBlockCapacity(cacheMeta.getBlockCapacity());
-            logger.info(JsonUtils.toJson(restCreateSubCacheRequest));
-            RestCreateSubCacheResponse createCacheResponse =
-                    httpClient.post(url, path, restCreateSubCacheRequest, RestCreateSubCacheResponse.class);
-            if (createCacheResponse == null) {
-                throw new RuntimeException(String.format("failed to create subcache[%s]", JsonUtils.toJson(subCache)));
+
+        try {
+            for (SubCacheMeta subCache : subCaches) {
+                ReplicationMeta meta = subCache.getReplicationMetas().get(0);
+                Host host = meta.getHost();
+                String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+                String path = "/subcache";
+                RestCreateSubCacheRequest restCreateSubCacheRequest = new RestCreateSubCacheRequest();
+                restCreateSubCacheRequest.setName(cacheMeta.getName());
+                restCreateSubCacheRequest.setEntryClassName(cacheMeta.getEntryClassName());
+                restCreateSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+                restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
+                restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
+                restCreateSubCacheRequest.setBlockCapacity(cacheMeta.getBlockCapacity());
+                logger.info(JsonUtils.toJson(restCreateSubCacheRequest));
+                RestCreateSubCacheResponse createCacheResponse =
+                        httpClient.post(url, path, restCreateSubCacheRequest, RestCreateSubCacheResponse.class);
+                if (createCacheResponse == null) {
+                    throw new CacheCreateFailureException(String.format(
+                            "failed to create subcache[%s]", JsonUtils.toJson(subCache)));
+                }
+                if (createCacheResponse.getError() == null) {
+                    throw new CacheCreateFailureException(String.format(
+                            "failed to create subcache[%s], error[%s]",
+                            JsonUtils.toJson(subCache), createCacheResponse.getError()));
+                }
             }
+        } catch (Exception e) {
+
         }
     }
 
@@ -274,7 +282,7 @@ public class CacheClusterService {
 
 
             // 先改变集群的状态
-            createCacheInCluster(cacheMeta);
+            createSubCachesInCluster(cacheMeta);
 
             // 再改变集群在zookeeper中的状态
             doCreateCache(cacheMeta);

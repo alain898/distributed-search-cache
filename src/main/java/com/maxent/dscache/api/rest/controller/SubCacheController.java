@@ -1,8 +1,10 @@
 package com.maxent.dscache.api.rest.controller;
 
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
+import com.maxent.dscache.api.rest.request.RestDeleteSubCacheRequest;
 import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
+import com.maxent.dscache.api.rest.response.RestDeleteSubCacheResponse;
 import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.ICacheEntry;
@@ -14,10 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
@@ -50,6 +49,37 @@ public class SubCacheController {
                     request.getPartitionsPerSubCache(),
                     request.getBlocksPerPartition(),
                     request.getBlockCapacity());
+
+            return new RestCreateSubCacheResponse(
+                    request.getName(),
+                    request.getEntryClassName(),
+                    request.getSubCacheId(),
+                    request.getPartitionsPerSubCache(),
+                    request.getBlocksPerPartition(),
+                    request.getBlockCapacity());
+        } catch (CacheExistException e) {
+            String errInfo = String.format("cache[%s] already exist", request.getName());
+            logger.warn(errInfo, e);
+            return RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo);
+        } catch (Exception e) {
+            String errInfo = String.format(
+                    "failed to create cache[%s], exception[%s]",
+                    request.getName(), e.getMessage());
+            logger.error(errInfo, e);
+            return RestHelper.createErrorResponse(RestCreateSubCacheResponse.class, errInfo);
+        }
+    }
+
+    @DELETE
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public RestDeleteSubCacheResponse delete(@Context final HttpServletResponse httpServletResponse,
+                                             final RestDeleteSubCacheRequest request) {
+
+        try {
+            subCacheService.deleteSubCache(
+                    request.getName(),
+                    request.getSubCacheId());
 
             return new RestCreateSubCacheResponse(
                     request.getName(),
