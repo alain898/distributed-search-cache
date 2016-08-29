@@ -94,8 +94,9 @@ public class CacheClusterService {
         List<Host> hosts = new ArrayList<>();
         List<String> hostsPath = zkClient.getChildren().forPath(HOSTS_PATH);
         for (String hostPath : hostsPath) {
+            String fullHostPath = StringUtils.join(HOSTS_PATH, "/", hostPath);
             Host host = JsonUtils.fromJson(
-                    new String(zkClient.getData().forPath(hostPath), Charsets.UTF_8),
+                    new String(zkClient.getData().forPath(fullHostPath), Charsets.UTF_8),
                     Host.class);
             hosts.add(host.getId(), host);
         }
@@ -108,23 +109,26 @@ public class CacheClusterService {
         List<CacheMeta> caches = new ArrayList<>();
         List<String> cachesPath = zkClient.getChildren().forPath(CACHES_PATH);
         for (String cachePath : cachesPath) {
+            String fullCachePath = StringUtils.join(CACHES_PATH, "/", cachePath);
             CacheZnode cacheZnode = JsonUtils.fromJson(
-                    new String(zkClient.getData().forPath(cachePath), Charsets.UTF_8),
+                    new String(zkClient.getData().forPath(fullCachePath), Charsets.UTF_8),
                     CacheZnode.class);
 
             List<SubCacheMeta> subCaches = new ArrayList<>();
-            List<String> subCachesPath = zkClient.getChildren().forPath(cachePath);
+            List<String> subCachesPath = zkClient.getChildren().forPath(fullCachePath);
             for (String subCachePath : subCachesPath) {
+                String fullSubCachePath = StringUtils.join(fullCachePath, "/", subCachePath);
                 SubCacheZnode subCacheZnode = JsonUtils.fromJson(
-                        new String(zkClient.getData().forPath(subCachePath), Charsets.UTF_8),
+                        new String(zkClient.getData().forPath(fullSubCachePath), Charsets.UTF_8),
                         SubCacheZnode.class);
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(subCacheZnode.getId());
                 List<ReplicationMeta> replications = new ArrayList<>();
                 List<String> replicationsPath = zkClient.getChildren().forPath(subCachePath);
                 for (String replicationPath : replicationsPath) {
+                    String fullReplicationPath = StringUtils.join(subCachePath, "/", replicationPath);
                     ReplicationZnode replicationZnode = JsonUtils.fromJson(
-                            new String(zkClient.getData().forPath(replicationPath), Charsets.UTF_8),
+                            new String(zkClient.getData().forPath(fullReplicationPath), Charsets.UTF_8),
                             ReplicationZnode.class);
                     ReplicationMeta replicationMeta = new ReplicationMeta();
                     replicationMeta.setId(replicationZnode.getId());
