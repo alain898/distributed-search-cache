@@ -162,7 +162,11 @@ public class CacheClusterService {
             return doGetCacheClusterMeta();
         } finally {
             // don't worry, if zookeeper connection closed, the lock will release by zookeeper.
-            lock.readLock().release();
+            try {
+                lock.readLock().release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
         }
     }
 
@@ -206,15 +210,20 @@ public class CacheClusterService {
                 }
             }
         } catch (Exception e) {
-            for (SubCacheMeta subCache : subCaches) {
-                ReplicationMeta meta = subCache.getReplicationMetas().get(0);
-                Host host = meta.getHost();
-                String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-                String path = "/subcache/delete";
-                RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
-                restDeleteSubCacheRequest.setName(cacheMeta.getName());
-                restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
-                httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
+            try {
+                for (SubCacheMeta subCache : subCaches) {
+                    ReplicationMeta meta = subCache.getReplicationMetas().get(0);
+                    Host host = meta.getHost();
+                    String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+                    String path = "/subcache/delete";
+                    RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
+                    restDeleteSubCacheRequest.setName(cacheMeta.getName());
+                    restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+                    httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
+                }
+            } catch (Exception e1) {
+                logger.error(String.format(
+                        "failed to clean cacheMeta[%s] after create failed", JsonUtils.toJson(cacheMeta)));
             }
             throw e;
         }
@@ -298,9 +307,12 @@ public class CacheClusterService {
             // 再改变集群在zookeeper中的状态
             doCreateCache(cacheMeta);
 
-
         } finally {
-            lock.release();
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
         }
     }
 
@@ -331,7 +343,11 @@ public class CacheClusterService {
                 doAddHost(newHost);
             }
         } finally {
-            lock.release();
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
         }
     }
 
