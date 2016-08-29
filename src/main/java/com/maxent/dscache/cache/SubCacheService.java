@@ -75,7 +75,7 @@ public class SubCacheService {
         }
     }
 
-    public SubCache<ICacheEntry> getSubCache(String cacheName, String subCacheId) {
+    private SubCache<ICacheEntry> getSubCache(String cacheName, String subCacheId) {
         Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
 
