@@ -133,6 +133,7 @@ public class CacheClusterService {
                     ReplicationMeta replicationMeta = new ReplicationMeta();
                     replicationMeta.setId(replicationZnode.getId());
                     replicationMeta.setHost(hosts.get(replicationZnode.getHostId()));
+                    replicationMeta.setZkNodeName(replicationPath);
                     replications.add(replicationMeta);
                 }
                 subCacheMeta.setReplicationMetas(replications);
@@ -289,9 +290,11 @@ public class CacheClusterService {
             for (int i = 0; i < subCaches; i++) {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(i);
-                subCacheMeta.setZkNodeName(String.format("subcache%d", i));
+                subCacheMeta.setZkNodeName(String.format("subcache_%d", i));
                 ReplicationMeta replicationMeta = new ReplicationMeta();
+                replicationMeta.setId(i);
                 replicationMeta.setHost(hosts.get(i % hosts.size()));
+                replicationMeta.setZkNodeName(String.format("replication_%d", 0));
                 List<ReplicationMeta> replicationMetas = new ArrayList<>();
                 replicationMetas.add(replicationMeta);
                 subCacheMeta.setReplicationMetas(replicationMetas);
