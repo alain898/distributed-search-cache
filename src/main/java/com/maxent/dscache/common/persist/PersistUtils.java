@@ -36,7 +36,7 @@ public class PersistUtils {
 
         PatternLayoutEncoder encoder = new PatternLayoutEncoder();
         encoder.setContext(context);
-        encoder.setPattern("%msg");
+        encoder.setPattern("%msg%n");
         encoder.start();
 
         rollingFileAppender.setRollingPolicy(rollingPolicy);
