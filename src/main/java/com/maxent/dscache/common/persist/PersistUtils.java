@@ -29,7 +29,7 @@ public class PersistUtils {
         rollingFileAppender.setAppend(true);
 
         TimeBasedRollingPolicy rollingPolicy = new TimeBasedRollingPolicy();
-        rollingPolicy.setFileNamePattern(dir + File.separator + file + "_%d{yyyy-MM-dd_HH}.dat");
+        rollingPolicy.setFileNamePattern(dir + File.separator + file + ".%d{yyyy-MM-dd_HH}.dat");
         rollingPolicy.setParent(rollingFileAppender);
         rollingPolicy.setContext(context);
         rollingPolicy.start();
