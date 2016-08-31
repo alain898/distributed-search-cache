@@ -2,15 +2,18 @@ package com.maxent.dscache.api.rest.controller;
 
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteSubCacheRequest;
+import com.maxent.dscache.api.rest.request.RestSaveEntryRequest;
 import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteSubCacheResponse;
+import com.maxent.dscache.api.rest.response.RestSaveEntryResponse;
 import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.ICacheEntry;
 import com.maxent.dscache.cache.SubCacheService;
 import com.maxent.dscache.cache.exceptions.CacheDeleteFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
+import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,8 +98,23 @@ public class SubCacheController {
 
     @POST
     @Path("/save")
-    public String save(@Context final HttpServletResponse httpServletResponse,
-                       final String request) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public RestSaveEntryResponse save(@Context final HttpServletResponse httpServletResponse,
+                                      final RestSaveEntryRequest request) {
+        try {
+            subCacheService.saveEntry(
+                    request.getCacheName(),
+                    request.getSubCacheId(),
+                    JsonUtils.fromMap(request.getQueryEntry(), ICacheEntry.class));
+            return new RestSaveEntryResponse("success");
+        } catch (Exception e) {
+            String errInfo = String.format(
+                    "failed to delete cache[%s], exception[%s]",
+                    request.getName(), e.getMessage());
+            logger.error(errInfo, e);
+            return RestHelper.createErrorResponse(RestDeleteSubCacheResponse.class, errInfo);
+        }
         return "save " + request;
     }
 

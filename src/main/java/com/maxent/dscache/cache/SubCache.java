@@ -80,6 +80,10 @@ public class SubCache<E extends ICacheEntry> {
         return Lists.newArrayList(Pair.of(maxScoreEntry, maxScore));
     }
 
+    public void save(E entry){
+
+    }
+
     public void clear() {
         partitions.forEach(IPartition::clear);
         partitions.clear();

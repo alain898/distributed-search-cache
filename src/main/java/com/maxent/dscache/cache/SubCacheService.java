@@ -1,10 +1,7 @@
 package com.maxent.dscache.cache;
 
 import com.google.common.base.Preconditions;
-import com.maxent.dscache.cache.exceptions.CacheCreateFailureException;
-import com.maxent.dscache.cache.exceptions.CacheDeleteFailureException;
-import com.maxent.dscache.cache.exceptions.CacheExistException;
-import com.maxent.dscache.cache.exceptions.CacheMatchFailureException;
+import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -73,6 +70,23 @@ public class SubCacheService {
                 caches.remove(cacheName);
             }
         }
+    }
+
+    public void saveEntry(final String cacheName,
+                          final String subCacheId,
+                          final Map query)
+            throws CacheSaveFailureException {
+        SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
+        if (subCache == null) {
+            throw new CacheSaveFailureException(String.format(
+                    "cannot find cache[%s], subCache[%s]", cacheName, subCacheId));
+        }
+
+        Class<ICacheEntry> cacheEntryClass = subCache.getCacheEntryClass();
+
+        ICacheEntry queryEntry = JsonUtils.fromMap(query, cacheEntryClass);
+
+        subCache.save(queryEntry);
     }
 
     private SubCache<ICacheEntry> getSubCache(String cacheName, String subCacheId) {
