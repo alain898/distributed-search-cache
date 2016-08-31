@@ -106,16 +106,15 @@ public class SubCacheController {
             subCacheService.saveEntry(
                     request.getCacheName(),
                     request.getSubCacheId(),
-                    JsonUtils.fromMap(request.getQueryEntry(), ICacheEntry.class));
+                    request.getQueryEntry());
             return new RestSaveEntryResponse("success");
         } catch (Exception e) {
             String errInfo = String.format(
-                    "failed to delete cache[%s], exception[%s]",
-                    request.getName(), e.getMessage());
+                    "failed to save, request[%s], exception[%s]",
+                    JsonUtils.toJson(request), e.getMessage());
             logger.error(errInfo, e);
-            return RestHelper.createErrorResponse(RestDeleteSubCacheResponse.class, errInfo);
+            return RestHelper.createErrorResponse(RestSaveEntryResponse.class, errInfo);
         }
-        return "save " + request;
     }
 
     @POST
