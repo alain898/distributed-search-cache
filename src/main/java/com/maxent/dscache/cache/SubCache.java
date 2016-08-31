@@ -2,26 +2,37 @@ package com.maxent.dscache.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.maxent.dscache.cache.ICacheEntry;
 import com.maxent.dscache.cache.collection.IPartition;
 import com.maxent.dscache.cache.collection.ListPartition;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.partitioner.IPartitioner;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by alain on 16/8/18.
  */
 public class SubCache<E extends ICacheEntry> {
+    private static final Logger logger = LoggerFactory.getLogger(SubCache.class);
+
     private final Class<E> cacheEntryClass;
     private final int partitionNumber;
     private final IPartitioner partitioner;
     private final List<IPartition<E>> partitions;
 
+    private final BlockingQueue<E> persistQueue = new ArrayBlockingQueue<>(1024);
+
+    private volatile boolean shutdown = false;
 
     public SubCache(Class<E> cacheEntryClass, int partitionNumber, int blockCapacity, long blockNumber) {
         Preconditions.checkNotNull(cacheEntryClass, "cacheEntryClass is null");
@@ -80,8 +91,47 @@ public class SubCache<E extends ICacheEntry> {
         return Lists.newArrayList(Pair.of(maxScoreEntry, maxScore));
     }
 
-    public void save(E entry){
+    public void save(E entry) {
+        int partition = partitioner.getPartition(entry.key());
+        partitions.get(partition).add(entry);
+        persist(entry);
+    }
 
+    private void persist(E entry) {
+        if (entry != null) {
+            persistQueue.offer(entry);
+        }
+    }
+
+    private class PersistWorker implements Runnable {
+        @Override
+        public void run() {
+            int bufferCapacity = 1024;
+            List<E> buffer = new ArrayList<>(bufferCapacity);
+            while (!shutdown) {
+                try {
+                    E entry = persistQueue.poll(1, TimeUnit.SECONDS);
+                    if (entry != null) {
+                        buffer.add(entry);
+                    }
+                    if (buffer.size() == bufferCapacity) {
+                        flush(buffer);
+                        buffer.clear();
+                    }
+                } catch (InterruptedException e) {
+                    logger.warn("InterruptedException caught, exit");
+                    if (!buffer.isEmpty()) {
+                        flush(buffer);
+                        buffer.clear();
+                    }
+                    break;
+                }
+            }
+        }
+
+        private void flush(List<E> buffer) {
+            
+        }
     }
 
     public void clear() {
