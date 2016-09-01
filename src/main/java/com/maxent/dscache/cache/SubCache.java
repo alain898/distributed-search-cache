@@ -49,6 +49,9 @@ public class SubCache<E extends ICacheEntry> {
     private final String subCacheId;
     private final Class<E> cacheEntryClass;
     private final int partitionNumber;
+    private final int blockCapacity;
+    private final long blockNumber;
+
     private final IPartitioner partitioner;
     private final List<IPartition<E>> partitions;
 
@@ -75,14 +78,16 @@ public class SubCache<E extends ICacheEntry> {
         this.partitionNumber = partitionNumber;
         this.partitioner = new HashPartitioner(partitionNumber);
         this.partitions = createPartitions(partitionNumber, blockCapacity, blockNumber);
+        this.blockCapacity = blockCapacity;
+        this.blockNumber = blockNumber;
 
         this.persistFile = String.format("%s_%s", cacheName, subCacheId);
         this.flusher = PersistUtils.createFlusher(persistFile, DEFAULT_PERSIST_DIR, persistFile);
 
         logger.info(String.format("cacheName[%s], subCacheId[%s], cacheEntryClass[%s], " +
                         "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
-                cacheName, subCacheId, cacheEntryClass,
-                partitionNumber, blockCapacity, blockNumber));
+                this.cacheName, this.subCacheId, this.cacheEntryClass,
+                this.partitionNumber, this.blockCapacity, this.blockNumber));
     }
 
     private List<IPartition<E>> createPartitions(int partitionNumber, int blockCapacity, long totalBlockNumber) {
@@ -189,7 +194,12 @@ public class SubCache<E extends ICacheEntry> {
     }
 
     public void warmUp() {
-
+        long deltaTime = 2 * 60 * 60 * 1000L;
+        try {
+            loadSubCacheData(deltaTime);
+        } catch (Exception e) {
+            logger.error("failed to warm up");
+        }
     }
 
     private long getLastValidTime(Path path) {
@@ -244,7 +254,7 @@ public class SubCache<E extends ICacheEntry> {
         return result;
     }
 
-    public void loadSubCacheData(long deltaTs) throws IOException {
+    public void loadSubCacheData(long deltaTime) throws IOException {
         String persistDirPath = new File(persistDir).getName();
         List<Path> paths = Files.
                 list(Paths.get(persistDirPath)).
@@ -257,7 +267,7 @@ public class SubCache<E extends ICacheEntry> {
         }
 
         long lastValidTime = getLastValidTime(paths);
-        List<Path> files = Lists.reverse(getFilesAfter(paths, lastValidTime - deltaTs));
+        List<Path> files = Lists.reverse(getFilesAfter(paths, lastValidTime - deltaTime));
         for (Path file : files) {
             LineIterator iterator = FileUtils.lineIterator(file.toFile(), Charsets.UTF_8.toString());
             while (iterator.hasNext()) {
