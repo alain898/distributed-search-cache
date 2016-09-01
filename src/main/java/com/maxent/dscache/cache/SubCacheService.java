@@ -41,6 +41,7 @@ public class SubCacheService {
                 SubCache<ICacheEntry> subCache = SubCacheFactory.newCache(
                         cacheName,
                         entryClassName,
+                        subCacheId,
                         partitions,
                         blocks_per_partition,
                         block_capacity);

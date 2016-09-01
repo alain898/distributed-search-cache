@@ -6,6 +6,9 @@ import com.maxent.dscache.cache.collection.IPartition;
 import com.maxent.dscache.cache.collection.ListPartition;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.partitioner.IPartitioner;
+import com.maxent.dscache.common.persist.Flusher;
+import com.maxent.dscache.common.persist.PersistUtils;
+import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -25,6 +28,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class SubCache<E extends ICacheEntry> {
     private static final Logger logger = LoggerFactory.getLogger(SubCache.class);
 
+    private static final String DEFAULT_PERSIST_DIR = "/services/data/dscache";
+
+    private final String cacheName;
+    private final String subCacheId;
     private final Class<E> cacheEntryClass;
     private final int partitionNumber;
     private final IPartitioner partitioner;
@@ -32,18 +39,34 @@ public class SubCache<E extends ICacheEntry> {
 
     private final BlockingQueue<E> persistQueue = new ArrayBlockingQueue<>(1024);
 
+    private final String dataFile;
+    private final Flusher flusher;
+
     private volatile boolean shutdown = false;
 
-    public SubCache(Class<E> cacheEntryClass, int partitionNumber, int blockCapacity, long blockNumber) {
+    public SubCache(String cacheName, String subCacheId, Class<E> cacheEntryClass,
+                    int partitionNumber, int blockCapacity, long blockNumber) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
         Preconditions.checkNotNull(cacheEntryClass, "cacheEntryClass is null");
         Preconditions.checkArgument(partitionNumber > 0, "partitionNumber must be positive");
         Preconditions.checkArgument(blockCapacity > 0, "blockCapacity must be positive");
         Preconditions.checkArgument(blockNumber > 0, "blockNumber must be positive");
 
+        this.cacheName = cacheName;
+        this.subCacheId = subCacheId;
         this.cacheEntryClass = cacheEntryClass;
         this.partitionNumber = partitionNumber;
         this.partitioner = new HashPartitioner(partitionNumber);
         this.partitions = createPartitions(partitionNumber, blockCapacity, blockNumber);
+
+        this.dataFile = String.format("%s_%s", cacheName, subCacheId);
+        this.flusher = PersistUtils.createFlusher(dataFile, DEFAULT_PERSIST_DIR, dataFile);
+
+        logger.info(String.format("cacheName[%s], subCacheId[%s], cacheEntryClass[%s], " +
+                        "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
+                cacheName, subCacheId, cacheEntryClass,
+                partitionNumber, blockCapacity, blockNumber));
     }
 
     private List<IPartition<E>> createPartitions(int partitionNumber, int blockCapacity, long totalBlockNumber) {
@@ -130,7 +153,13 @@ public class SubCache<E extends ICacheEntry> {
         }
 
         private void flush(List<E> buffer) {
-            
+            if (buffer != null) {
+                for (E entry : buffer) {
+                    long timestamp = System.currentTimeMillis();
+                    String content = StringUtils.join(timestamp, JsonUtils.toJson(entry));
+                    flusher.flush(content);
+                }
+            }
         }
     }
 
