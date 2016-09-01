@@ -1,5 +1,7 @@
 package com.maxent.dscache.cache;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.maxent.dscache.cache.collection.IPartition;
@@ -9,18 +11,31 @@ import com.maxent.dscache.common.partitioner.IPartitioner;
 import com.maxent.dscache.common.persist.Flusher;
 import com.maxent.dscache.common.persist.PersistUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
+import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+import java.util.function.IntFunction;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Created by alain on 16/8/18.
@@ -39,8 +54,9 @@ public class SubCache<E extends ICacheEntry> {
 
     private final BlockingQueue<E> persistQueue = new ArrayBlockingQueue<>(1024);
 
-    private final String dataFile;
+    private final String persistFile;
     private final Flusher flusher;
+    private final String persistDir = DEFAULT_PERSIST_DIR;
 
     private volatile boolean shutdown = false;
 
@@ -60,8 +76,8 @@ public class SubCache<E extends ICacheEntry> {
         this.partitioner = new HashPartitioner(partitionNumber);
         this.partitions = createPartitions(partitionNumber, blockCapacity, blockNumber);
 
-        this.dataFile = String.format("%s_%s", cacheName, subCacheId);
-        this.flusher = PersistUtils.createFlusher(dataFile, DEFAULT_PERSIST_DIR, dataFile);
+        this.persistFile = String.format("%s_%s", cacheName, subCacheId);
+        this.flusher = PersistUtils.createFlusher(persistFile, DEFAULT_PERSIST_DIR, persistFile);
 
         logger.info(String.format("cacheName[%s], subCacheId[%s], cacheEntryClass[%s], " +
                         "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
@@ -115,9 +131,13 @@ public class SubCache<E extends ICacheEntry> {
     }
 
     public void save(E entry) {
+        saveWithoutPersist(entry);
+        persist(entry);
+    }
+
+    private void saveWithoutPersist(E entry) {
         int partition = partitioner.getPartition(entry.key());
         partitions.get(partition).add(entry);
-        persist(entry);
     }
 
     private void persist(E entry) {
@@ -156,7 +176,7 @@ public class SubCache<E extends ICacheEntry> {
             if (buffer != null) {
                 for (E entry : buffer) {
                     long timestamp = System.currentTimeMillis();
-                    String content = StringUtils.join(timestamp, JsonUtils.toJson(entry));
+                    String content = Joiner.on(",").join(timestamp, JsonUtils.toJson(entry));
                     flusher.flush(content);
                 }
             }
@@ -168,7 +188,108 @@ public class SubCache<E extends ICacheEntry> {
         partitions.clear();
     }
 
+    public void warmUp() {
+
+    }
+
+    private long getLastValidTime(Path path) {
+        ReversedLinesFileReader reversedLinesFileReader = null;
+        try {
+            reversedLinesFileReader =
+                    new ReversedLinesFileReader(path.toFile(), Charsets.UTF_8);
+            String line;
+            while ((line = reversedLinesFileReader.readLine()) != null) {
+                String[] splits = line.split(",");
+                if (splits.length == 2) {
+                    try {
+                        return Long.parseLong(splits[0]);
+                    } catch (Exception e) {
+                        logger.warn(String.format("failed to parse[%s]", splits[0]));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error(String.format("failed to getLastValidTime[%s]", String.valueOf(path)), e);
+            return -1;
+        } finally {
+            if (reversedLinesFileReader != null) {
+                try {
+                    reversedLinesFileReader.close();
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+        }
+        return -1;
+    }
+
+    private long getLastValidTime(List<Path> paths) {
+        for (Path path : paths) {
+            Long lastValidTime = getLastValidTime(path);
+            if (lastValidTime != -1) {
+                return lastValidTime;
+            }
+        }
+        return -1;
+    }
+
+    private List<Path> getFilesAfter(List<Path> paths, long timestamp) {
+        List<Path> result = new ArrayList<>();
+        for (Path path : paths) {
+            long lastValidTime = getLastValidTime(path);
+            if (lastValidTime >= timestamp) {
+                result.add(path);
+            }
+        }
+        return result;
+    }
+
+    public void loadSubCacheData(long deltaTs) throws IOException {
+        String persistDirPath = new File(persistDir).getName();
+        List<Path> paths = Files.
+                list(Paths.get(persistDirPath)).
+                filter(path -> path.getFileName().toString().startsWith(persistFile)).
+                sorted().
+                collect(Collectors.toList());
+
+        if (CollectionUtils.isEmpty(paths)) {
+            return;
+        }
+
+        long lastValidTime = getLastValidTime(paths);
+        List<Path> files = Lists.reverse(getFilesAfter(paths, lastValidTime - deltaTs));
+        for (Path file : files) {
+            LineIterator iterator = FileUtils.lineIterator(file.toFile(), Charsets.UTF_8.toString());
+            while (iterator.hasNext()) {
+                String line = iterator.nextLine();
+                String[] splits = line.split(",");
+                if (splits.length != 2) {
+                    continue;
+                }
+                String entryJson = splits[1];
+                E entry = JsonUtils.fromJson(entryJson, cacheEntryClass);
+                saveWithoutPersist(entry);
+            }
+        }
+
+    }
+
     private boolean isEqualKey(String key1, String key2) {
         return StringUtils.equals(key1, key2);
+    }
+
+    public static void main(String[] args) throws IOException {
+        String persistDir = ".";
+        String persistFile = "pom11";
+        String persistDirPath = new File(persistDir).getName();
+        List<String> paths = Files.
+                list(Paths.get(persistDirPath)).
+                map(path -> path.getFileName().toString()).
+                filter(path -> path.startsWith(persistFile)).
+                sorted().
+                collect(Collectors.toList());
+        for (String path : paths) {
+            System.out.println(path);
+        }
     }
 }
