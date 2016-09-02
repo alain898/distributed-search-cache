@@ -102,15 +102,70 @@ public class SubCache<E extends ICacheEntry> {
     }
 
     public List<Pair<E, Double>> search(E query) {
+        return search(query, SearchPolicy.MATCH_BEST);
+    }
+
+    public List<Pair<E, Double>> search(E query, SearchPolicy policy) {
         if (query == null) {
             return null;
         }
 
         int partitionId = partitioner.getPartition(query.key());
         int partitionIdInSubCache = partitionId % partitionNumber;
-
         IPartition<E> partition = partitions.get(partitionIdInSubCache);
+        switch (policy) {
+            case MATCH_FIRST:
+                return searchFirstMatched(partition, query);
+            case MATCH_ALL:
+                return searchAllMatched(partition, query);
+            case MATCH_BEST:
+                return searchBestMatched(partition, query);
+            default:
+                return searchBestMatched(partition, query);
+        }
+    }
 
+    public List<Pair<E, Double>> searchFirstMatched(IPartition<E> partition, E query) {
+        long lastIndex = partition.getLastIndex();
+        for (; lastIndex >= 0; lastIndex--) {
+            E entry = partition.get(lastIndex);
+            if (entry == null) {
+                return null;
+            }
+            if (!isEqualKey(entry.key(), query.key())) {
+                continue;
+            }
+            double score = query.match(entry);
+            if (score > query.threadshold()) {
+                return Lists.newArrayList(Pair.of(entry, score));
+            }
+        }
+        return null;
+    }
+
+    public List<Pair<E, Double>> searchAllMatched(IPartition<E> partition, E query) {
+        List<Pair<E, Double>> results = new ArrayList<>();
+        long lastIndex = partition.getLastIndex();
+        for (; lastIndex >= 0; lastIndex--) {
+            E entry = partition.get(lastIndex);
+            if (entry == null) {
+                return null;
+            }
+            if (!isEqualKey(entry.key(), query.key())) {
+                continue;
+            }
+            double score = query.match(entry);
+            if (score > query.threadshold()) {
+                results.add(Pair.of(entry, score));
+            }
+        }
+        if (CollectionUtils.isEmpty(results)) {
+            return null;
+        }
+        return results;
+    }
+
+    public List<Pair<E, Double>> searchBestMatched(IPartition<E> partition, E query) {
         double maxScore = query.threadshold();
         E maxScoreEntry = null;
         long lastIndex = partition.getLastIndex();
@@ -122,7 +177,6 @@ public class SubCache<E extends ICacheEntry> {
             if (!isEqualKey(entry.key(), query.key())) {
                 continue;
             }
-            //TODO: Add Match Return Policy
             double score = query.match(entry);
             if (score > maxScore) {
                 maxScore = score;
