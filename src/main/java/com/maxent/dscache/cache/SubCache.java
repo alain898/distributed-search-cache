@@ -74,7 +74,7 @@ public class SubCache<E extends ICacheEntry> {
         this.cacheEntryClass = cacheEntryClass;
         this.totalPartitionNumber = totalPartitionNumber;
         this.partitionNumber = partitionNumber;
-        this.partitioner = new HashPartitioner(partitionNumber);
+        this.partitioner = new HashPartitioner(totalPartitionNumber);
         this.partitions = createPartitions(partitionNumber, blockCapacity, blockNumber);
         this.blockCapacity = blockCapacity;
         this.blockNumber = blockNumber;
@@ -82,9 +82,9 @@ public class SubCache<E extends ICacheEntry> {
         this.persistFile = String.format("%s_%s", cacheName, subCacheId);
         this.flusher = PersistUtils.createFlusher(persistFile, DEFAULT_PERSIST_DIR, persistFile);
 
-        logger.info(String.format("cacheName[%s], subCacheId[%s], cacheEntryClass[%s], " +
+        logger.info(String.format("cacheName[%s], totalPartitionNumber[%d], cacheEntryClass[%s], subCacheId[%s]," +
                         "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
-                this.cacheName, this.subCacheId, this.cacheEntryClass,
+                this.cacheName, this.totalPartitionNumber, this.cacheEntryClass, this.subCacheId,
                 this.partitionNumber, this.blockCapacity, this.blockNumber));
     }
 
@@ -107,7 +107,7 @@ public class SubCache<E extends ICacheEntry> {
         }
 
         int partitionId = partitioner.getPartition(query.key());
-        int partitionIdInSubCache = partitionId / partitionNumber;
+        int partitionIdInSubCache = partitionId % partitionNumber;
 
         IPartition<E> partition = partitions.get(partitionIdInSubCache);
 
