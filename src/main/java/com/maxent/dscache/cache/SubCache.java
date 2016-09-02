@@ -195,8 +195,9 @@ public class SubCache<E extends ICacheEntry> {
     }
 
     private void saveWithoutPersist(E entry) {
-        int partition = partitioner.getPartition(entry.key());
-        partitions.get(partition).add(entry);
+        int partitionId = partitioner.getPartition(entry.key());
+        int partitionIdInSubCache = partitionId % partitionNumber;
+        partitions.get(partitionIdInSubCache).add(entry);
     }
 
     private void persist(E entry) {
