@@ -4,8 +4,8 @@ package com.maxent.dscache.cache;
  * Created by alain on 16/8/20.
  */
 public class Host {
-    private static int INVALID_ID = -1;
-    private static int INVALID_PORT = -1;
+    public static int INVALID_ID = -1;
+    public static int INVALID_PORT = -1;
     private int id;
     private String host;
     private int port;

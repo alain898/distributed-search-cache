@@ -76,7 +76,7 @@ public class CacheClusterService {
      *
      * @throws Exception
      */
-    private CacheClusterMeta doGetCacheClusterMeta() throws Exception {
+    public CacheClusterMeta doGetCacheClusterMeta() throws Exception {
         CacheClusterMeta cacheClusterMeta = new CacheClusterMeta();
 
         CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
@@ -169,6 +169,10 @@ public class CacheClusterService {
                 logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
+    }
+
+    public InterProcessReadWriteLock getClusterReadWriteLock() {
+        return new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
     }
 
 

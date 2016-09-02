@@ -1,11 +1,18 @@
 package com.maxent.dscache.cache;
 
 import com.google.common.base.Preconditions;
+import com.google.common.net.InetAddresses;
 import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.tools.JsonUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,8 +21,77 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by alain on 16/8/20.
  */
 public class SubCacheService {
+    private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
+
+    private static final int DEFAULT_REST_SERVER_PORT = 5232;
+
     private final Object lock = new Object();
     private Map<String, Map<String, SubCache<ICacheEntry>>> caches = new ConcurrentHashMap<>();
+
+    private final Host host;
+
+    public SubCacheService() {
+        try {
+            String ip = InetAddress.getLocalHost().getHostAddress();
+            this.host = new Host(ip, DEFAULT_REST_SERVER_PORT);
+            restoreCaches(caches);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void restoreCaches(Map<String, Map<String, SubCache<ICacheEntry>>> caches) throws Exception {
+        CacheClusterService cacheClusterService = new CacheClusterService();
+        InterProcessReadWriteLock clusterLock = cacheClusterService.getClusterReadWriteLock();
+        clusterLock.readLock().acquire();
+
+        try {
+            CacheClusterMeta cacheClusterMeta = cacheClusterService.doGetCacheClusterMeta();
+            List<Host> hosts = cacheClusterMeta.getHosts();
+            if (hosts == null) {
+                return;
+            }
+            for (Host h : hosts) {
+                if (host.equals(h)) {
+                    host.setId(h.getId());
+                }
+            }
+            if (host.getId() == Host.INVALID_ID) {
+                return;
+            }
+
+            List<CacheMeta> cacheMetas = cacheClusterMeta.getCaches();
+            for (CacheMeta cacheMeta : cacheMetas) {
+                List<SubCacheMeta> subCacheMetas = cacheMeta.getSubCacheMetas();
+                for (SubCacheMeta subCacheMeta : subCacheMetas) {
+                    Host h = subCacheMeta.getReplicationMetas().get(0).getHost();
+                    if (host.equals(h)) {
+                        String cacheName = cacheMeta.getName();
+                        String entryClassName = cacheMeta.getEntryClassName();
+                        String subCacheId = String.valueOf(subCacheMeta.getId());
+                        int partitions = cacheMeta.getPartitionsPerSubCache();
+                        int blocksPerPartition = cacheMeta.getBlocksPerPartition();
+                        int blockCapacity = cacheMeta.getBlockCapacity();
+                        createSubCache(cacheName, entryClassName, subCacheId,
+                                partitions, blocksPerPartition, blockCapacity);
+                        logger.info(String.format(
+                                "successfully create cacheName[%s], entryClassName[%s], subCacheId[%s], " +
+                                        "partitions[%d], blocksPerPartition[%d], blockCapacity[%d]",
+                                cacheName, entryClassName, subCacheId,
+                                partitions, blocksPerPartition, blockCapacity));
+                    }
+                }
+            }
+
+
+        } finally {
+            try {
+                clusterLock.readLock().release();
+            } catch (Exception e) {
+                logger.error("failed to release clusterLock", e);
+            }
+        }
+    }
 
     public void createSubCache(final String cacheName,
                                final String entryClassName,
@@ -53,6 +129,7 @@ public class SubCacheService {
             }
         }
     }
+
 
     public void deleteSubCache(final String cacheName,
                                final String subCacheId)
