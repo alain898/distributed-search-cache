@@ -124,9 +124,9 @@ public class CacheClusterService {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(subCacheZnode.getId());
                 List<ReplicationMeta> replications = new ArrayList<>();
-                List<String> replicationsPath = zkClient.getChildren().forPath(subCachePath);
+                List<String> replicationsPath = zkClient.getChildren().forPath(fullSubCachePath);
                 for (String replicationPath : replicationsPath) {
-                    String fullReplicationPath = StringUtils.join(subCachePath, "/", replicationPath);
+                    String fullReplicationPath = StringUtils.join(fullSubCachePath, "/", replicationPath);
                     ReplicationZnode replicationZnode = JsonUtils.fromJson(
                             new String(zkClient.getData().forPath(fullReplicationPath), Charsets.UTF_8),
                             ReplicationZnode.class);
@@ -144,6 +144,8 @@ public class CacheClusterService {
             cacheMeta.setVersion(cacheZnode.getVersion());
             cacheMeta.setName(cacheZnode.getName());
             cacheMeta.setPartitionsPerSubCache(cacheZnode.getPartitionsPerSubCache());
+            cacheMeta.setBlocksPerPartition(cacheZnode.getBlocksPerPartition());
+            cacheMeta.setBlockCapacity(cacheZnode.getBlockCapacity());
             cacheMeta.setEntryClassName(cacheZnode.getEntryClassName());
             cacheMeta.setEntryClass(ClassUtils.loadClass(cacheZnode.getEntryClassName(), ICacheEntry.class));
             cacheMeta.setSubCacheMetas(subCaches);
