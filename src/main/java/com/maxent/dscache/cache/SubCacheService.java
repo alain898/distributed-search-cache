@@ -1,12 +1,9 @@
 package com.maxent.dscache.cache;
 
 import com.google.common.base.Preconditions;
-import com.google.common.net.InetAddresses;
 import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.tools.JsonUtils;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.slf4j.Logger;
@@ -34,13 +31,13 @@ public class SubCacheService {
         try {
             String ip = InetAddress.getLocalHost().getHostAddress();
             this.host = new Host(ip, DEFAULT_REST_SERVER_PORT);
-            restoreCaches(caches);
+            restoreCaches();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void restoreCaches(Map<String, Map<String, SubCache<ICacheEntry>>> caches) throws Exception {
+    private void restoreCaches() throws Exception {
         CacheClusterService cacheClusterService = new CacheClusterService();
         InterProcessReadWriteLock clusterLock = cacheClusterService.getClusterReadWriteLock();
         clusterLock.readLock().acquire();
@@ -83,6 +80,13 @@ public class SubCacheService {
                 }
             }
 
+            for (Map.Entry<String, Map<String, SubCache<ICacheEntry>>> cache : caches.entrySet()) {
+                Map<String, SubCache<ICacheEntry>> subCacheMap = cache.getValue();
+                for (Map.Entry<String, SubCache<ICacheEntry>> subCacheEntry : subCacheMap.entrySet()) {
+                    SubCache<ICacheEntry> subCache = subCacheEntry.getValue();
+                    subCache.warmUp();
+                }
+            }
 
         } finally {
             try {
