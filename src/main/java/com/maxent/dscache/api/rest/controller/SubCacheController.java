@@ -36,9 +36,6 @@ public class SubCacheController {
 
     private SubCacheService subCacheService = new SubCacheService();
 
-    @Context
-    private HttpServletResponse httpServletResponse2;
-
     @POST
     @Path("/create")
     @Consumes(MediaType.APPLICATION_JSON)
