@@ -196,6 +196,7 @@ public class SubCache<E extends ICacheEntry> {
             loadSubCacheData(deltaTime);
         } catch (Exception e) {
             logger.error("failed to warm up");
+            throw new RuntimeException(e);
         }
     }
 
@@ -252,7 +253,7 @@ public class SubCache<E extends ICacheEntry> {
     }
 
     public void loadSubCacheData(long deltaTime) throws IOException {
-        String persistDirPath = new File(persistDir).getName();
+        String persistDirPath = new File(persistDir).getPath();
         List<Path> paths = Files.
                 list(Paths.get(persistDirPath)).
                 filter(path -> path.getFileName().toString().startsWith(persistFile)).
@@ -264,6 +265,10 @@ public class SubCache<E extends ICacheEntry> {
         }
 
         long lastValidTime = getLastValidTime(paths);
+        if (lastValidTime == -1) {
+            return;
+        }
+
         List<Path> files = Lists.reverse(getFilesAfter(paths, lastValidTime - deltaTime));
         for (Path file : files) {
             LineIterator iterator = FileUtils.lineIterator(file.toFile(), Charsets.UTF_8.toString());

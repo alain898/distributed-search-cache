@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public enum SubCacheService implements IService {
     INSTANCE;
 
-    private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
+    private final Logger logger = LoggerFactory.getLogger(SubCacheService.class);
 
     private static final int DEFAULT_REST_SERVER_PORT = 5232;
 
