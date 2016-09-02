@@ -9,14 +9,14 @@ import java.util.List;
  * Created by alain on 16/8/21.
  */
 @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
-public class RestCacheMatchResponse {
+public class RestCacheSearchResponse {
     private List<Double> scores;
     private List<ICacheEntry> entries;
 
-    public RestCacheMatchResponse() {
+    public RestCacheSearchResponse() {
     }
 
-    public RestCacheMatchResponse(List<Double> scores, List<ICacheEntry> entries) {
+    public RestCacheSearchResponse(List<Double> scores, List<ICacheEntry> entries) {
         this.scores = scores;
         this.entries = entries;
     }

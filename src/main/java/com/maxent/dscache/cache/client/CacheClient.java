@@ -1,7 +1,7 @@
 package com.maxent.dscache.cache.client;
 
-import com.maxent.dscache.api.rest.request.RestCacheMatchRequest;
-import com.maxent.dscache.api.rest.response.RestCacheMatchResponse;
+import com.maxent.dscache.api.rest.request.RestCacheSearchRequest;
+import com.maxent.dscache.api.rest.response.RestCacheSearchResponse;
 import com.maxent.dscache.cache.*;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.http.HttpClient;
@@ -30,13 +30,16 @@ public class CacheClient {
         Host host = subCacheMeta.getReplicationMetas().get(0).getHost();
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-        String path = "/subcache";
+        String path = "/subcache/search";
         HttpClient httpClient = new HttpClient();
-        RestCacheMatchResponse restCacheMatchResponse =
-                httpClient.post(url, path, new RestCacheMatchRequest(), RestCacheMatchResponse.class);
+        RestCacheSearchRequest restCacheSearchRequest = new RestCacheSearchRequest();
+        restCacheSearchRequest.setCacheName(cacheName);
+        restCacheSearchRequest.setEntries(entry);
+        RestCacheSearchResponse restCacheSearchResponse =
+                httpClient.post(url, path, new RestCacheSearchRequest(), RestCacheSearchResponse.class);
         return new CacheSearchResponse(
-                restCacheMatchResponse.getScores(),
-                restCacheMatchResponse.getEntries());
+                restCacheSearchResponse.getScores(),
+                restCacheSearchResponse.getEntries());
     }
 
     public static void main(String[] args) {
