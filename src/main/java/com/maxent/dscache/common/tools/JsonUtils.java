@@ -36,4 +36,8 @@ public class JsonUtils {
     public static <T> T fromMap(Map map, Class<T> classOfT) {
         return jackson.convertValue(map, classOfT);
     }
+
+    public static Map toMap(Object object) {
+        return jackson.convertValue(object, Map.class);
+    }
 }

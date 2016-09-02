@@ -1,7 +1,8 @@
 package com.maxent.dscache.cache.client;
 
-import com.maxent.dscache.api.rest.request.RestCacheSearchRequest;
-import com.maxent.dscache.api.rest.response.RestCacheSearchResponse;
+import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
+import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
+import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.cache.*;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.http.HttpClient;
@@ -32,11 +33,12 @@ public class CacheClient {
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
         String path = "/subcache/search";
         HttpClient httpClient = new HttpClient();
-        RestCacheSearchRequest restCacheSearchRequest = new RestCacheSearchRequest();
+        RestSubCacheSearchRequest restCacheSearchRequest = new RestSubCacheSearchRequest();
         restCacheSearchRequest.setCacheName(cacheName);
-        restCacheSearchRequest.setEntries(entry);
-        RestCacheSearchResponse restCacheSearchResponse =
-                httpClient.post(url, path, new RestCacheSearchRequest(), RestCacheSearchResponse.class);
+        restCacheSearchRequest.setSubCacheId(String.valueOf(subCacheId));
+        restCacheSearchRequest.setQueryEntry(JsonUtils.toMap(entry));
+        RestSubCacheSearchResponse restCacheSearchResponse =
+                httpClient.post(url, path, restCacheSearchRequest, RestSubCacheSearchResponse.class);
         return new CacheSearchResponse(
                 restCacheSearchResponse.getScores(),
                 restCacheSearchResponse.getEntries());
