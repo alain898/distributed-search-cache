@@ -17,7 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by alain on 16/8/20.
  */
-public class SubCacheService {
+public enum SubCacheService implements IService {
+    INSTANCE;
+
     private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
 
     private static final int DEFAULT_REST_SERVER_PORT = 5232;
@@ -27,7 +29,7 @@ public class SubCacheService {
 
     private final Host host;
 
-    public SubCacheService() {
+    SubCacheService() {
         try {
             String ip = InetAddress.getLocalHost().getHostAddress();
             this.host = new Host(ip, DEFAULT_REST_SERVER_PORT);
@@ -36,6 +38,7 @@ public class SubCacheService {
             throw new RuntimeException(e);
         }
     }
+
 
     private void restoreCaches() throws Exception {
         CacheClusterService cacheClusterService = new CacheClusterService();
@@ -192,6 +195,16 @@ public class SubCacheService {
         ICacheEntry queryEntry = JsonUtils.fromMap(query, cacheEntryClass);
 
         return subCache.match(queryEntry);
+
+    }
+
+    @Override
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
 
     }
 }

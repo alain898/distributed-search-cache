@@ -2,6 +2,7 @@ package com.maxent.dscache;
 
 import com.maxent.dscache.api.rest.RestResource;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.maxent.dscache.cache.SubCacheService;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.commons.daemon.DaemonInitException;
@@ -56,12 +57,14 @@ public class Main implements Daemon {
             ServletContextHandler context = new ServletContextHandler(server, "/*");
             context.addServlet(servlet, "/*");
 
+            SubCacheService.INSTANCE.start();
             server.start();
             logger.info("started successfully.");
         } catch (Exception e) {
             logger.error(String.format("unexpected exception[%s]", ExceptionUtils.getStackTrace(e)));
             throw e;
         }
+
     }
 
     @Override
@@ -70,6 +73,8 @@ public class Main implements Daemon {
         try {
             server.stop();
             server.join();
+
+            SubCacheService.INSTANCE.start();
         } catch (Exception e) {
             logger.error(String.format("unexpected exception[%s]", ExceptionUtils.getStackTrace(e)));
             throw e;
