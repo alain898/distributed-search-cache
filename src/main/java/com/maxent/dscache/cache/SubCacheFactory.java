@@ -11,6 +11,7 @@ public class SubCacheFactory {
 
     public static <E extends ICacheEntry> SubCache<E> newCache(String cacheName,
                                                                String entryClassName,
+                                                               int totalPartitionNumber,
                                                                String subCacheId,
                                                                int partitions,
                                                                int blocks_per_partition,
@@ -29,6 +30,7 @@ public class SubCacheFactory {
             throw new RuntimeException(errInfo);
         }
 
-        return new SubCache<>(cacheName, subCacheId, clazz, partitions, block_capacity, blocks_per_partition);
+        return new SubCache<>(cacheName, clazz, totalPartitionNumber, subCacheId,
+                partitions, block_capacity, blocks_per_partition);
     }
 }

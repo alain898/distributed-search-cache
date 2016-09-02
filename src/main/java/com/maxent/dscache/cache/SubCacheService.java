@@ -63,6 +63,7 @@ public enum SubCacheService implements IService {
             List<CacheMeta> cacheMetas = cacheClusterMeta.getCaches();
             for (CacheMeta cacheMeta : cacheMetas) {
                 List<SubCacheMeta> subCacheMetas = cacheMeta.getSubCacheMetas();
+                int totalPartitionNumber = subCacheMetas.size() * cacheMeta.getPartitionsPerSubCache();
                 for (SubCacheMeta subCacheMeta : subCacheMetas) {
                     Host h = subCacheMeta.getReplicationMetas().get(0).getHost();
                     if (host.equals(h)) {
@@ -72,7 +73,7 @@ public enum SubCacheService implements IService {
                         int partitions = cacheMeta.getPartitionsPerSubCache();
                         int blocksPerPartition = cacheMeta.getBlocksPerPartition();
                         int blockCapacity = cacheMeta.getBlockCapacity();
-                        createSubCache(cacheName, entryClassName, subCacheId,
+                        createSubCache(cacheName, entryClassName, totalPartitionNumber, subCacheId,
                                 partitions, blocksPerPartition, blockCapacity);
                         logger.info(String.format(
                                 "successfully create cacheName[%s], entryClassName[%s], subCacheId[%s], " +
@@ -102,6 +103,7 @@ public enum SubCacheService implements IService {
 
     public void createSubCache(final String cacheName,
                                final String entryClassName,
+                               final int totalPartitionNumber,
                                final String subCacheId,
                                final int partitions,
                                final int blocks_per_partition,
@@ -110,6 +112,7 @@ public enum SubCacheService implements IService {
 
         Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(entryClassName), "entryClassName is blank");
+        Preconditions.checkArgument(totalPartitionNumber > 0, "totalPartitionNumber is not positive");
         Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
         Preconditions.checkArgument(partitions > 0, "partitions is not positive");
         Preconditions.checkArgument(blocks_per_partition > 0, "blocks_per_partition is not positive");
@@ -124,6 +127,7 @@ public enum SubCacheService implements IService {
                 SubCache<ICacheEntry> subCache = SubCacheFactory.newCache(
                         cacheName,
                         entryClassName,
+                        totalPartitionNumber,
                         subCacheId,
                         partitions,
                         blocks_per_partition,

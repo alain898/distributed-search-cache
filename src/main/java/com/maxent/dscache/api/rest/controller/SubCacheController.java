@@ -49,6 +49,7 @@ public class SubCacheController {
             subCacheService.createSubCache(
                     request.getName(),
                     request.getEntryClassName(),
+                    request.getTotalPartitionNumber(),
                     request.getSubCacheId(),
                     request.getPartitionsPerSubCache(),
                     request.getBlocksPerPartition(),

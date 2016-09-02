@@ -44,6 +44,7 @@ public class SubCache<E extends ICacheEntry> {
     private final String subCacheId;
     private final Class<E> cacheEntryClass;
     private final int partitionNumber;
+    private final int totalPartitionNumber;
     private final int blockCapacity;
     private final long blockNumber;
 
@@ -58,11 +59,12 @@ public class SubCache<E extends ICacheEntry> {
 
     private volatile boolean shutdown = false;
 
-    public SubCache(String cacheName, String subCacheId, Class<E> cacheEntryClass,
+    public SubCache(String cacheName, Class<E> cacheEntryClass, int totalPartitionNumber, String subCacheId,
                     int partitionNumber, int blockCapacity, long blockNumber) {
         Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
         Preconditions.checkNotNull(cacheEntryClass, "cacheEntryClass is null");
+        Preconditions.checkArgument(totalPartitionNumber > 0, "totalPartitionNumber must be positive");
         Preconditions.checkArgument(partitionNumber > 0, "partitionNumber must be positive");
         Preconditions.checkArgument(blockCapacity > 0, "blockCapacity must be positive");
         Preconditions.checkArgument(blockNumber > 0, "blockNumber must be positive");
@@ -70,6 +72,7 @@ public class SubCache<E extends ICacheEntry> {
         this.cacheName = cacheName;
         this.subCacheId = subCacheId;
         this.cacheEntryClass = cacheEntryClass;
+        this.totalPartitionNumber = totalPartitionNumber;
         this.partitionNumber = partitionNumber;
         this.partitioner = new HashPartitioner(partitionNumber);
         this.partitions = createPartitions(partitionNumber, blockCapacity, blockNumber);
