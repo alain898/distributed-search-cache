@@ -11,7 +11,6 @@ import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.ICacheEntry;
 import com.maxent.dscache.cache.SubCacheService;
-import com.maxent.dscache.cache.exceptions.CacheDeleteFailureException;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
 import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -20,7 +19,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
@@ -122,7 +124,7 @@ public class SubCacheController {
                                              final RestSubCacheSearchRequest request) {
 
         try {
-            List<Pair<ICacheEntry, Double>> results = subCacheService.match(
+            List<Pair<ICacheEntry, Double>> results = subCacheService.search(
                     request.getCacheName(),
                     request.getSubCacheId(),
                     request.getQueryEntry());

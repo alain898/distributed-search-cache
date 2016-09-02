@@ -98,13 +98,15 @@ public class SubCache<E extends ICacheEntry> {
         return cacheEntryClass;
     }
 
-    public List<Pair<E, Double>> match(E query) {
+    public List<Pair<E, Double>> search(E query) {
         if (query == null) {
             return null;
         }
 
         int partitionId = partitioner.getPartition(query.key());
-        IPartition<E> partition = partitions.get(partitionId);
+        int partitionIdInSubCache = partitionId / partitionNumber;
+
+        IPartition<E> partition = partitions.get(partitionIdInSubCache);
 
         double maxScore = query.threadshold();
         E maxScoreEntry = null;

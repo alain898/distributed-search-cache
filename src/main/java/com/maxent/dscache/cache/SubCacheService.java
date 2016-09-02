@@ -9,7 +9,6 @@ import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -182,7 +181,7 @@ public enum SubCacheService implements IService {
         return caches.getOrDefault(cacheName, new ConcurrentHashMap<>()).get(subCacheId);
     }
 
-    public List<Pair<ICacheEntry, Double>> match(String cacheName, String subCacheId, Map query)
+    public List<Pair<ICacheEntry, Double>> search(String cacheName, String subCacheId, Map query)
             throws CacheMatchFailureException {
 
         SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
@@ -195,7 +194,7 @@ public enum SubCacheService implements IService {
 
         ICacheEntry queryEntry = JsonUtils.fromMap(query, cacheEntryClass);
 
-        return subCache.match(queryEntry);
+        return subCache.search(queryEntry);
 
     }
 
