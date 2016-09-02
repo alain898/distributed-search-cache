@@ -31,7 +31,8 @@ public enum SubCacheService implements IService {
 
     SubCacheService() {
         try {
-            String ip = InetAddress.getLocalHost().getHostAddress();
+            //String ip = InetAddress.getLocalHost().getHostAddress();
+            String ip = "127.0.0.1";
             this.host = new Host(ip, DEFAULT_REST_SERVER_PORT);
             restoreCaches();
         } catch (Exception e) {

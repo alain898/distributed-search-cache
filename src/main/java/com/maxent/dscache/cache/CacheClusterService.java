@@ -227,8 +227,7 @@ public class CacheClusterService {
                     httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
                 }
             } catch (Exception e1) {
-                logger.error(String.format(
-                        "failed to clean cacheMeta[%s] after create failed", JsonUtils.toJson(cacheMeta)));
+                logger.error("failed to clean cacheMeta[%s] after create failed", e);
             }
             throw e;
         }
