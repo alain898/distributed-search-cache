@@ -13,6 +13,7 @@ import com.maxent.dscache.cache.ICacheEntry;
 import com.maxent.dscache.cache.SubCacheService;
 import com.maxent.dscache.cache.exceptions.CacheExistException;
 import com.maxent.dscache.common.tools.JsonUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,6 +130,10 @@ public class SubCacheController {
                     request.getCacheName(),
                     request.getSubCacheId(),
                     request.getQueryEntry());
+
+            if (CollectionUtils.isEmpty(results)) {
+                return new RestSubCacheSearchResponse();
+            }
 
             List<ICacheEntry> entries = new ArrayList<>();
             List<Double> scores = new ArrayList<>();
