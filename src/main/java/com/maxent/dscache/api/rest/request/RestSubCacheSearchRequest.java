@@ -8,6 +8,8 @@ import java.util.Map;
 public class RestSubCacheSearchRequest {
     private String cacheName;
     private String subCacheId;
+    private String searchMode;
+    private String searchPolicy;
     private Map queryEntry;
 
     public String getCacheName() {
@@ -32,5 +34,21 @@ public class RestSubCacheSearchRequest {
 
     public void setSubCacheId(String subCacheId) {
         this.subCacheId = subCacheId;
+    }
+
+    public String getSearchMode() {
+        return searchMode;
+    }
+
+    public void setSearchMode(String searchMode) {
+        this.searchMode = searchMode;
+    }
+
+    public String getSearchPolicy() {
+        return searchPolicy;
+    }
+
+    public void setSearchPolicy(String searchPolicy) {
+        this.searchPolicy = searchPolicy;
     }
 }

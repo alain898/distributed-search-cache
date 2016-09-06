@@ -22,7 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by alain on 16/8/20.
@@ -182,6 +184,15 @@ public class CacheClusterService {
         for (CacheMeta cache : cacheCluster.getCaches()) {
             if (cache.getName().equals(name)) {
                 return cache;
+            }
+        }
+        return null;
+    }
+
+    public CacheGroupMeta getCacheGroupMeta(String name) {
+        for (CacheGroupMeta cacheGroup : cacheCluster.getCacheGroups()) {
+            if (cacheGroup.getCacheGroupName().equals(name)) {
+                return cacheGroup;
             }
         }
         return null;

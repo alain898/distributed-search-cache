@@ -9,6 +9,7 @@ public class CacheClusterMeta {
     private String version;
     private List<CacheMeta> caches;
     private List<Host> hosts;
+    private List<CacheGroupMeta> cacheGroups;
 
     public String getVersion() {
         return version;
@@ -32,5 +33,13 @@ public class CacheClusterMeta {
 
     public void setHosts(List<Host> hosts) {
         this.hosts = hosts;
+    }
+
+    public List<CacheGroupMeta> getCacheGroups() {
+        return cacheGroups;
+    }
+
+    public void setCacheGroups(List<CacheGroupMeta> cacheGroups) {
+        this.cacheGroups = cacheGroups;
     }
 }
