@@ -185,7 +185,9 @@ public enum SubCacheService implements IService {
         return caches.getOrDefault(cacheName, new ConcurrentHashMap<>()).get(subCacheId);
     }
 
-    public List<Pair<ICacheEntry, Double>> search(String cacheName, String subCacheId, Map query)
+    public List<Pair<ICacheEntry, Double>> search(String cacheName,
+                                                  String subCacheId,
+                                                  Map query)
             throws CacheMatchFailureException {
 
         SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
@@ -199,6 +201,28 @@ public enum SubCacheService implements IService {
         ICacheEntry queryEntry = JsonUtils.fromMap(query, cacheEntryClass);
 
         return subCache.search(queryEntry);
+
+    }
+
+
+    public List<Pair<ICacheEntry, Double>> search(String cacheName,
+                                                  String subCacheId,
+                                                  String searchMode,
+                                                  String searchPolicy,
+                                                  Map query)
+            throws CacheMatchFailureException {
+
+        SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
+        if (subCache == null) {
+            throw new CacheMatchFailureException(String.format(
+                    "cannot find cache[%s], subCache[%s]", cacheName, subCacheId));
+        }
+
+        Class<ICacheEntry> cacheEntryClass = subCache.getCacheEntryClass();
+
+        ICacheEntry queryEntry = JsonUtils.fromMap(query, cacheEntryClass);
+
+        return subCache.search(queryEntry,SearchPolicy.valueOf(searchPolicy));
 
     }
 

@@ -4,6 +4,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.maxent.dscache.cache.client.CacheClient;
+import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.cache.collection.IPartition;
 import com.maxent.dscache.cache.collection.ListPartition;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
@@ -47,7 +49,6 @@ public class SubCache<E extends ICacheEntry> {
     private final int totalPartitionNumber;
     private final int blockCapacity;
     private final long blockNumber;
-
     private final IPartitioner partitioner;
     private final List<IPartition<E>> partitions;
 
@@ -58,6 +59,10 @@ public class SubCache<E extends ICacheEntry> {
     private final String persistDir = DEFAULT_PERSIST_DIR;
 
     private volatile boolean shutdown = false;
+
+    private final CacheClusterService cacheClusterService;
+
+    private final CacheClient cacheClient;
 
     public SubCache(String cacheName, Class<E> cacheEntryClass, int totalPartitionNumber, String subCacheId,
                     int partitionNumber, int blockCapacity, long blockNumber) {
@@ -81,6 +86,8 @@ public class SubCache<E extends ICacheEntry> {
 
         this.persistFile = String.format("%s_%s", cacheName, subCacheId);
         this.flusher = PersistUtils.createFlusher(persistFile, DEFAULT_PERSIST_DIR, persistFile);
+        this.cacheClusterService = new CacheClusterService();
+        this.cacheClient = new CacheClient(this.cacheClusterService);
 
         logger.info(String.format("cacheName[%s], totalPartitionNumber[%d], cacheEntryClass[%s], subCacheId[%s]," +
                         "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
@@ -106,6 +113,10 @@ public class SubCache<E extends ICacheEntry> {
     }
 
     public List<Pair<E, Double>> search(E query, SearchPolicy policy) {
+        return search(query, policy, SearchMode.MATCH_GROUP);
+    }
+
+    public List<Pair<E, Double>> search(E query, SearchPolicy policy, SearchMode searchMode) {
         if (query == null) {
             return null;
         }
@@ -115,17 +126,18 @@ public class SubCache<E extends ICacheEntry> {
         IPartition<E> partition = partitions.get(partitionIdInSubCache);
         switch (policy) {
             case MATCH_FIRST:
-                return searchFirstMatched(partition, query);
+                return searchFirstMatched(partition, query, searchMode);
             case MATCH_ALL:
-                return searchAllMatched(partition, query);
+                return searchAllMatched(partition, query, searchMode);
             case MATCH_BEST:
-                return searchBestMatched(partition, query);
+                return searchBestMatched(partition, query, searchMode);
             default:
-                return searchBestMatched(partition, query);
+                return searchBestMatched(partition, query, searchMode);
         }
     }
 
-    public List<Pair<E, Double>> searchFirstMatched(IPartition<E> partition, E query) {
+
+    public List<Pair<E, Double>> searchFirstMatched(IPartition<E> partition, E query, SearchMode searchMode) {
         long lastIndex = partition.getLastIndex();
         for (; lastIndex >= 0; lastIndex--) {
             E entry = partition.get(lastIndex);
@@ -140,16 +152,26 @@ public class SubCache<E extends ICacheEntry> {
                 return Lists.newArrayList(Pair.of(entry, score));
             }
         }
+        CacheMeta cacheMeta = cacheClusterService.getCache(cacheName);
+        double usedPercent = partition.size() / (double) (blockCapacity * blockNumber);
+        if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
+            String forwardCacheName = cacheMeta.getForwardCache();
+            CacheMeta forwardCache = cacheClusterService.getCache(forwardCacheName);
+            CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
+            if (CollectionUtils.isNotEmpty(response.getEntries())) {
+                return Lists.newArrayList(Pair.of((E) response.getEntries().get(0), response.getScores().get(0)));
+            }
+        }
         return null;
     }
 
-    public List<Pair<E, Double>> searchAllMatched(IPartition<E> partition, E query) {
+    public List<Pair<E, Double>> searchAllMatched(IPartition<E> partition, E query, SearchMode searchMode) {
         List<Pair<E, Double>> results = new ArrayList<>();
         long lastIndex = partition.getLastIndex();
         for (; lastIndex >= 0; lastIndex--) {
             E entry = partition.get(lastIndex);
             if (entry == null) {
-                return null;
+                break;
             }
             if (!isEqualKey(entry.key(), query.key())) {
                 continue;
@@ -159,13 +181,24 @@ public class SubCache<E extends ICacheEntry> {
                 results.add(Pair.of(entry, score));
             }
         }
+        CacheMeta cacheMeta = cacheClusterService.getCache(cacheName);
+        double usedPercent = partition.size() / (double) (blockCapacity * blockNumber);
+        if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
+            String forwardCacheName = cacheMeta.getForwardCache();
+            CacheMeta forwardCache = cacheClusterService.getCache(forwardCacheName);
+            CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
+            if (CollectionUtils.isNotEmpty(response.getEntries())) {
+                results.addAll(Lists.newArrayList(
+                        Pair.of((E) response.getEntries().get(0), response.getScores().get(0))));
+            }
+        }
         if (CollectionUtils.isEmpty(results)) {
             return null;
         }
         return results;
     }
 
-    public List<Pair<E, Double>> searchBestMatched(IPartition<E> partition, E query) {
+    public List<Pair<E, Double>> searchBestMatched(IPartition<E> partition, E query, SearchMode searchMode) {
         double maxScore = query.threadshold();
         E maxScoreEntry = null;
         long lastIndex = partition.getLastIndex();
@@ -181,6 +214,19 @@ public class SubCache<E extends ICacheEntry> {
             if (score > maxScore) {
                 maxScore = score;
                 maxScoreEntry = entry;
+            }
+        }
+        CacheMeta cacheMeta = cacheClusterService.getCache(cacheName);
+        double usedPercent = partition.size() / (double) (blockCapacity * blockNumber);
+        if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
+            String forwardCacheName = cacheMeta.getForwardCache();
+            CacheMeta forwardCache = cacheClusterService.getCache(forwardCacheName);
+            CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
+            if (CollectionUtils.isNotEmpty(response.getEntries())) {
+                if (response.getScores().get(0) > maxScore) {
+                    maxScore = response.getScores().get(0);
+                    maxScoreEntry = (E) response.getEntries().get(0);
+                }
             }
         }
         if (maxScoreEntry == null) {

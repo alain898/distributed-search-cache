@@ -95,4 +95,9 @@ public class ListPartition<E> implements IPartition<E> {
             lock.writeLock().unlock();
         }
     }
+
+    @Override
+    public long size() {
+        return 0;
+    }
 }

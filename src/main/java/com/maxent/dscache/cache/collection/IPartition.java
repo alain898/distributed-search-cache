@@ -11,4 +11,6 @@ public interface IPartition<E> {
     long getLastIndex();
 
     void clear();
+
+    long size();
 }
