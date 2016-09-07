@@ -32,4 +32,14 @@ public class CacheGroupClient {
         CacheMeta cacheMeta = cacheMetaList.get(cacheIndex);
         return cacheClient.search(cacheMeta.getName(), entry);
     }
+
+    public void create(String cacheGroupName,
+                       String entryClassName,
+                       int cachesNumber,
+                       int subCachesPerCache,
+                       int partitionsPerSubCache,
+                       int blockCapacity,
+                       int blocksPerPartition) {
+
+    }
 }

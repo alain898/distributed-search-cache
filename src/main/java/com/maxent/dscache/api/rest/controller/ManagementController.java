@@ -1,8 +1,10 @@
 package com.maxent.dscache.api.rest.controller;
 
 import com.maxent.dscache.api.rest.request.RestAddHostsRequest;
+import com.maxent.dscache.api.rest.request.RestCreateCacheGroupRequest;
 import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.response.RestAddHostsResponse;
+import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.CacheClusterService;
@@ -55,14 +57,39 @@ public class ManagementController {
     @Path("/caches")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public RestCreateCacheResponse addCaches(@Context final HttpServletResponse httpServletResponse,
-                                             final RestCreateCacheRequest request) {
+    public RestCreateCacheResponse createCache(@Context final HttpServletResponse httpServletResponse,
+                                               final RestCreateCacheRequest request) {
 
         try {
             cacheClusterService.createCache(
                     request.getName(),
                     request.getEntryClassName(),
                     request.getSubCaches(),
+                    request.getPartitionsPerSubCache(),
+                    request.getBlocksPerPartition(),
+                    request.getBlockCapacity());
+            RestCreateCacheResponse response = new RestCreateCacheResponse();
+            response.setName(request.getName());
+            return response;
+        } catch (Exception e) {
+            logger.error("createCache failed", e);
+            return RestHelper.createErrorResponse(RestCreateCacheResponse.class, "createCache failed");
+        }
+    }
+
+    @POST
+    @Path("/cache_groups")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public RestCreateCacheGroupResponse createCacheGroup(@Context final HttpServletResponse httpServletResponse,
+                                                                  final RestCreateCacheGroupRequest request) {
+
+        try {
+            cacheClusterService.createCacheGroup(
+                    request.getCacheGroupName(),
+                    request.getEntryClassName(),
+                    request.getCachesNumber(),
+                    request.getSubCachesPerCache(),
                     request.getPartitionsPerSubCache(),
                     request.getBlocksPerPartition(),
                     request.getBlockCapacity());

@@ -39,6 +39,7 @@ public class CacheClusterService {
     private final String CACHE_CLUSTER_PATH = "/cache_cluster";
     private final String CACHES_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/caches");
     private final String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
+    private final String CACHE_GROUPS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/cache_groups");
     private final String HOST_PATH_PREFIX = "host_";
 
     private final String CACHE_CLUSTER_INITIAL_VERSION = "0";
@@ -404,4 +405,88 @@ public class CacheClusterService {
             throw new CacheInitializeFailureException("failed to check cluster", e);
         }
     }
+
+
+    public void createCacheGroup(String cacheGroupName,
+                                 String entryClassName,
+                                 int cacheGroupCapacity,
+                                 int cachesNumber,
+                                 int subCachesPerCache,
+                                 int partitionsPerSubCache,
+                                 int blocksPerPartition,
+                                 int blockCapacity) throws Exception {
+        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
+        lock.acquire();
+        try {
+            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
+            for (CacheGroupMeta cacheGroup : cacheGroups) {
+                if (cacheGroup.getCacheGroupName().equals(cacheGroupName)) {
+                    throw new CacheGroupCreateFailureException(
+                            String.format("cacheGroupName[%s] exist", cacheGroupName));
+                }
+            }
+
+            for (int i = 0; i < cachesNumber; i++) {
+                String cacheName = String.format("%s_cache_%d", cacheGroupName, i);
+                createCache(cacheName, entryClassName, subCachesPerCache,
+                        partitionsPerSubCache, blockCapacity, blocksPerPartition);
+            }
+
+            CacheGroupMeta cacheGroupMeta = new CacheGroupMeta();
+            cacheGroupMeta.setCacheGroupName(cacheGroupName);
+            cacheGroupMeta.setCacheGroupCapacity(cacheGroupCapacity);
+            cacheGroupMeta.setCurrentCachesNumber(cachesNumber);
+            cacheGroupMeta.setCacheMetas(cacheClusterMeta.getCaches()); // // TODO: only sub cache exist
+            cacheGroupMeta.setLastCachesNumber(-1);
+
+            doCreateCacheGroupInZookeeper(cacheGroupMeta);
+
+        } finally {
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
+        }
+    }
+
+    private void doCreateCacheGroupInZookeeper(CacheGroupMeta cacheGroupMeta) throws Exception {
+        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
+        lock.acquire();
+        try {
+            CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
+
+            List<String> caches = new ArrayList<>();
+            for (CacheMeta cacheMeta : cacheGroupMeta.getCacheMetas()) {
+                caches.add(cacheMeta.getName());
+            }
+            cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
+            cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
+            cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
+            cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getLastCachesNumber());
+            cacheGroupZnode.setCaches(caches);
+
+            String name = cacheGroupZnode.getCacheGroupName();
+            String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", name);
+            zkClient.create().forPath(cacheGroupZkPath);
+            zkClient.setData().forPath(cacheGroupZkPath,
+                    JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
+
+            for (String cache : caches) {
+                String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cache);
+                zkClient.create().forPath(cacheZkPath);
+            }
+
+        } finally {
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
+        }
+
+    }
 }
+
+
