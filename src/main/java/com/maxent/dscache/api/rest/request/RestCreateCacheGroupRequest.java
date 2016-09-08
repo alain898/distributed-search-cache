@@ -6,6 +6,7 @@ package com.maxent.dscache.api.rest.request;
 public class RestCreateCacheGroupRequest {
     private String cacheGroupName;
     private String entryClassName;
+    private int cacheGroupCapacity;
     private int cachesNumber;
     private int subCachesPerCache;
     private int partitionsPerSubCache;
@@ -66,5 +67,13 @@ public class RestCreateCacheGroupRequest {
 
     public void setBlocksPerPartition(int blocksPerPartition) {
         this.blocksPerPartition = blocksPerPartition;
+    }
+
+    public int getCacheGroupCapacity() {
+        return cacheGroupCapacity;
+    }
+
+    public void setCacheGroupCapacity(int cacheGroupCapacity) {
+        this.cacheGroupCapacity = cacheGroupCapacity;
     }
 }

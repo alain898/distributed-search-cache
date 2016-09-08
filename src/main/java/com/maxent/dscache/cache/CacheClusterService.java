@@ -10,6 +10,7 @@ import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -277,9 +278,9 @@ public class CacheClusterService {
         }
     }
 
-    public void createCache(String name, String entryClassName,
-                            int subCaches, int partitionsPerSubCache,
-                            int blockCapacity, int blocksPerPartition)
+    public CacheMeta createCache(String name, String entryClassName,
+                                 int subCaches, int partitionsPerSubCache,
+                                 int blockCapacity, int blocksPerPartition)
             throws Exception {
         InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
         lock.acquire();
@@ -324,6 +325,8 @@ public class CacheClusterService {
 
             // 再改变集群在zookeeper中的状态
             doCreateCache(cacheMeta);
+
+            return cacheMeta;
 
         } finally {
             try {
@@ -406,6 +409,47 @@ public class CacheClusterService {
         }
     }
 
+    public void alterCacheGroup(String cacheGroupName,
+                                int addedCaches) throws Exception {
+        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
+        lock.acquire();
+        try {
+            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
+            CacheGroupMeta cacheGroupMeta = null;
+            for (CacheGroupMeta cacheGroup : cacheGroups) {
+                if (cacheGroup.getCacheGroupName().equals(cacheGroupName)) {
+                    cacheGroupMeta = cacheGroup;
+                }
+            }
+            if (cacheGroupMeta == null) {
+                throw new CacheGroupCreateFailureException("failed to add cache in cacheGroupName");
+            }
+
+            String entryClassName = cacheGroupMeta.getEntryClassName();
+            int subCachesPerCache = cacheGroupMeta.getSubCachesPerCache();
+            int partitionsPerSubCache = cacheGroupMeta.getPartitionsPerSubCache();
+            int blockCapacity = cacheGroupMeta.getBlockCapacity();
+            int blocksPerPartition = cacheGroupMeta.getBlocksPerPartition();
+            int cachesNumber = cacheGroupMeta.getCurrentCachesNumber();
+            List<CacheMeta> newCaches = new ArrayList<>();
+            for (int i = 0; i < addedCaches; i++) {
+                String cacheName = String.format("%s_cache_%d", cacheGroupName, cachesNumber + i);
+                CacheMeta newCache = createCache(cacheName, entryClassName, subCachesPerCache,
+                        partitionsPerSubCache, blockCapacity, blocksPerPartition);
+                newCaches.add(newCache);
+            }
+
+            doAddCacheInCacheGroup(cacheGroupMeta, newCaches);
+
+        } finally {
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
+        }
+    }
 
     public void createCacheGroup(String cacheGroupName,
                                  String entryClassName,
@@ -437,8 +481,13 @@ public class CacheClusterService {
             cacheGroupMeta.setCacheGroupName(cacheGroupName);
             cacheGroupMeta.setCacheGroupCapacity(cacheGroupCapacity);
             cacheGroupMeta.setCurrentCachesNumber(cachesNumber);
-            cacheGroupMeta.setCacheMetas(cacheClusterMeta.getCaches()); // // TODO: only sub cache exist
+            cacheGroupMeta.setCacheMetas(cacheClusterMeta.getCaches()); // TODO: only sub cache exist
             cacheGroupMeta.setLastCachesNumber(-1);
+            cacheGroupMeta.setEntryClassName(entryClassName);
+            cacheGroupMeta.setSubCachesPerCache(subCachesPerCache);
+            cacheGroupMeta.setPartitionsPerSubCache(partitionsPerSubCache);
+            cacheGroupMeta.setBlocksPerPartition(blocksPerPartition);
+            cacheGroupMeta.setBlockCapacity(blockCapacity);
 
             doCreateCacheGroupInZookeeper(cacheGroupMeta);
 
@@ -465,6 +514,11 @@ public class CacheClusterService {
             cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
             cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
             cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getLastCachesNumber());
+            cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
+            cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
+            cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
+            cacheGroupZnode.setBlockCapacity(cacheGroupMeta.getBlockCapacity());
+            cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
             cacheGroupZnode.setCaches(caches);
 
             String name = cacheGroupZnode.getCacheGroupName();
@@ -477,6 +531,54 @@ public class CacheClusterService {
                 String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cache);
                 zkClient.create().forPath(cacheZkPath);
             }
+
+        } finally {
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
+        }
+
+    }
+
+
+    private void doAddCacheInCacheGroup(CacheGroupMeta cacheGroupMeta, List<CacheMeta> newCacheMetas) throws Exception {
+        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
+        lock.acquire();
+        try {
+            List<CacheMeta> allCacheMetas = new ArrayList<>();
+            allCacheMetas.addAll(cacheGroupMeta.getCacheMetas());
+            allCacheMetas.addAll(newCacheMetas);
+
+            List<String> allCaches = new ArrayList<>();
+            for (CacheMeta cacheMeta : allCacheMetas) {
+                allCaches.add(cacheMeta.getName());
+            }
+
+            CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
+            cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
+            cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
+            cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
+            cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getLastCachesNumber());
+            cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
+            cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
+            cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
+            cacheGroupZnode.setBlockCapacity(cacheGroupMeta.getBlockCapacity());
+            cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
+            cacheGroupZnode.setCaches(allCaches);
+
+            String name = cacheGroupZnode.getCacheGroupName();
+            String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", name);
+            zkClient.setData().forPath(cacheGroupZkPath,
+                    JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
+
+            for (CacheMeta cache : newCacheMetas) {
+                String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cache.getName());
+                zkClient.create().forPath(cacheZkPath);
+            }
+
+            // // TODO: 16/9/8 roll back if failed
 
         } finally {
             try {

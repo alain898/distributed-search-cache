@@ -1,9 +1,11 @@
 package com.maxent.dscache.api.rest.controller;
 
 import com.maxent.dscache.api.rest.request.RestAddHostsRequest;
+import com.maxent.dscache.api.rest.request.RestAlterCacheGroupRequest;
 import com.maxent.dscache.api.rest.request.RestCreateCacheGroupRequest;
 import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.response.RestAddHostsResponse;
+import com.maxent.dscache.api.rest.response.RestAlterCacheGroupResponse;
 import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
@@ -82,23 +84,44 @@ public class ManagementController {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestCreateCacheGroupResponse createCacheGroup(@Context final HttpServletResponse httpServletResponse,
-                                                                  final RestCreateCacheGroupRequest request) {
+                                                         final RestCreateCacheGroupRequest request) {
 
         try {
             cacheClusterService.createCacheGroup(
                     request.getCacheGroupName(),
                     request.getEntryClassName(),
+                    request.getCacheGroupCapacity(),
                     request.getCachesNumber(),
                     request.getSubCachesPerCache(),
                     request.getPartitionsPerSubCache(),
                     request.getBlocksPerPartition(),
                     request.getBlockCapacity());
-            RestCreateCacheResponse response = new RestCreateCacheResponse();
-            response.setName(request.getName());
+            RestCreateCacheGroupResponse response = new RestCreateCacheGroupResponse();
+            response.setMessage("success");
             return response;
         } catch (Exception e) {
             logger.error("createCache failed", e);
-            return RestHelper.createErrorResponse(RestCreateCacheResponse.class, "createCache failed");
+            return RestHelper.createErrorResponse(RestCreateCacheGroupResponse.class, "create cache group failed");
+        }
+    }
+
+    @POST
+    @Path("/cache_groups/alter")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public RestAlterCacheGroupResponse alterCacheGroup(@Context final HttpServletResponse httpServletResponse,
+                                                       final RestAlterCacheGroupRequest request) {
+
+        try {
+            cacheClusterService.alterCacheGroup(
+                    request.getCacheGroupName(),
+                    request.getAddedCaches());
+            RestAlterCacheGroupResponse response = new RestAlterCacheGroupResponse();
+            response.setMessage("success");
+            return response;
+        } catch (Exception e) {
+            logger.error("createCache failed", e);
+            return RestHelper.createErrorResponse(RestAlterCacheGroupResponse.class, "add cache failed");
         }
     }
 }
