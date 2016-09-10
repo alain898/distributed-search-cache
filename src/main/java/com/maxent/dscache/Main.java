@@ -1,7 +1,7 @@
 package com.maxent.dscache;
 
-import com.maxent.dscache.api.rest.RestResource;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.maxent.dscache.api.rest.RestResource;
 import com.maxent.dscache.cache.SubCacheService;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;

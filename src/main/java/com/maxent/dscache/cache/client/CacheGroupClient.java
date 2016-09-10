@@ -1,15 +1,13 @@
 package com.maxent.dscache.cache.client;
 
 import com.maxent.dscache.api.rest.request.RestCreateCacheGroupRequest;
-import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteCacheGroupRequest;
-import com.maxent.dscache.api.rest.request.RestDeleteCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
-import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteCacheGroupResponse;
-import com.maxent.dscache.api.rest.response.RestDeleteCacheResponse;
 import com.maxent.dscache.cache.*;
-import com.maxent.dscache.cache.client.response.*;
+import com.maxent.dscache.cache.client.response.CacheGroupDeleteResponse;
+import com.maxent.dscache.cache.client.response.CacheSearchResponse;
+import com.maxent.dscache.cache.client.response.CreateCacheGroupResponse;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.partitioner.IPartitioner;
