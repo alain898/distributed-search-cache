@@ -10,7 +10,6 @@ import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
-import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -45,7 +44,8 @@ public class CacheClusterService {
 
     private final String CACHE_CLUSTER_INITIAL_VERSION = "0";
 
-    private CacheClusterMeta cacheCluster;
+    // just for local cache, it should updated when zookeeper changed.
+    private volatile CacheClusterMeta cacheCluster;
 
     public CacheClusterService() throws RuntimeException {
         try {
@@ -409,8 +409,8 @@ public class CacheClusterService {
         }
     }
 
-    public void alterCacheGroup(String cacheGroupName,
-                                int addedCaches) throws Exception {
+    public void updateCacheGroup(String cacheGroupName,
+                                 int addedCaches) throws Exception {
         InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
         lock.acquire();
         try {
@@ -471,17 +471,19 @@ public class CacheClusterService {
                 }
             }
 
+            List<CacheMeta> cacheMetas = new ArrayList<>();
             for (int i = 0; i < cachesNumber; i++) {
                 String cacheName = String.format("%s_cache_%d", cacheGroupName, i);
-                createCache(cacheName, entryClassName, subCachesPerCache,
+                CacheMeta cacheMeta = createCache(cacheName, entryClassName, subCachesPerCache,
                         partitionsPerSubCache, blockCapacity, blocksPerPartition);
+                cacheMetas.add(cacheMeta);
             }
 
             CacheGroupMeta cacheGroupMeta = new CacheGroupMeta();
             cacheGroupMeta.setCacheGroupName(cacheGroupName);
             cacheGroupMeta.setCacheGroupCapacity(cacheGroupCapacity);
             cacheGroupMeta.setCurrentCachesNumber(cachesNumber);
-            cacheGroupMeta.setCacheMetas(cacheClusterMeta.getCaches()); // TODO: only sub cache exist
+            cacheGroupMeta.setCacheMetas(cacheMetas);
             cacheGroupMeta.setLastCachesNumber(-1);
             cacheGroupMeta.setEntryClassName(entryClassName);
             cacheGroupMeta.setSubCachesPerCache(subCachesPerCache);
@@ -588,6 +590,84 @@ public class CacheClusterService {
             }
         }
 
+    }
+
+    public void deleteCacheGroup(String cacheGroupName) throws Exception {
+        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
+        lock.acquire();
+        try {
+            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
+            CacheGroupMeta cacheGroupMeta = null;
+            for (CacheGroupMeta cacheGroup : cacheGroups) {
+                if (cacheGroup.getCacheGroupName().equals(cacheGroupName)) {
+                    cacheGroupMeta = cacheGroup;
+                }
+            }
+
+            if (cacheGroupMeta == null) {
+                return;
+            }
+
+            doDeleteCacheGroup(cacheGroupMeta);
+
+        } finally {
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
+        }
+    }
+
+    private void doDeleteCacheGroup(CacheGroupMeta cacheGroupMeta) throws Exception {
+        List<CacheMeta> cacheMetas = cacheGroupMeta.getCacheMetas();
+        for (CacheMeta cache : cacheMetas) {
+            deleteCache(cache.getName());
+        }
+    }
+
+    public void deleteCache(String cacheName) throws Exception {
+        HttpClient httpClient = new HttpClient();
+        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
+        lock.acquire();
+        try {
+            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            List<CacheMeta> caches = cacheClusterMeta.getCaches();
+            CacheMeta cacheMeta = null;
+            for (CacheMeta cache : caches) {
+                if (cache.getName().equals(cacheName)) {
+                    cacheMeta = cache;
+                }
+            }
+
+            if (cacheMeta == null) {
+                return;
+            }
+
+            List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
+            for (SubCacheMeta subCache : subCaches) {
+                ReplicationMeta meta = subCache.getReplicationMetas().get(0);
+                Host host = meta.getHost();
+                String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+                String path = "/subcache/delete";
+                RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
+                restDeleteSubCacheRequest.setName(cacheMeta.getName());
+                restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+                httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
+            }
+
+            String name = cacheMeta.getName();
+            String cacheZkPath = StringUtils.join(CACHES_PATH, "/", name);
+            zkClient.delete().forPath(cacheZkPath);
+
+        } finally {
+            try {
+                lock.release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
+        }
     }
 }
 

@@ -1,13 +1,7 @@
 package com.maxent.dscache.api.rest.controller;
 
-import com.maxent.dscache.api.rest.request.RestAddHostsRequest;
-import com.maxent.dscache.api.rest.request.RestAlterCacheGroupRequest;
-import com.maxent.dscache.api.rest.request.RestCreateCacheGroupRequest;
-import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
-import com.maxent.dscache.api.rest.response.RestAddHostsResponse;
-import com.maxent.dscache.api.rest.response.RestAlterCacheGroupResponse;
-import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
-import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
+import com.maxent.dscache.api.rest.request.*;
+import com.maxent.dscache.api.rest.response.*;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.CacheClusterService;
 import com.maxent.dscache.cache.Host;
@@ -56,7 +50,7 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/caches")
+    @Path("/caches/create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestCreateCacheResponse createCache(@Context final HttpServletResponse httpServletResponse,
@@ -80,7 +74,25 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/cache_groups")
+    @Path("/caches/delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public RestDeleteCacheResponse deleteCache(@Context final HttpServletResponse httpServletResponse,
+                                               final RestDeleteCacheRequest request) {
+
+        try {
+            cacheClusterService.deleteCache(request.getCacheName());
+            RestDeleteCacheResponse response = new RestDeleteCacheResponse();
+            response.setMessage("success");
+            return response;
+        } catch (Exception e) {
+            logger.error("createCache failed", e);
+            return RestHelper.createErrorResponse(RestDeleteCacheResponse.class, "createCache failed");
+        }
+    }
+
+    @POST
+    @Path("/cache_groups/create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestCreateCacheGroupResponse createCacheGroup(@Context final HttpServletResponse httpServletResponse,
@@ -106,14 +118,14 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/cache_groups/alter")
+    @Path("/cache_groups/update")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public RestAlterCacheGroupResponse alterCacheGroup(@Context final HttpServletResponse httpServletResponse,
-                                                       final RestAlterCacheGroupRequest request) {
+    public RestAlterCacheGroupResponse updateCacheGroup(@Context final HttpServletResponse httpServletResponse,
+                                                        final RestAlterCacheGroupRequest request) {
 
         try {
-            cacheClusterService.alterCacheGroup(
+            cacheClusterService.updateCacheGroup(
                     request.getCacheGroupName(),
                     request.getAddedCaches());
             RestAlterCacheGroupResponse response = new RestAlterCacheGroupResponse();
@@ -122,6 +134,24 @@ public class ManagementController {
         } catch (Exception e) {
             logger.error("createCache failed", e);
             return RestHelper.createErrorResponse(RestAlterCacheGroupResponse.class, "add cache failed");
+        }
+    }
+
+    @POST
+    @Path("/cache_groups/delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public RestDeleteCacheGroupResponse deleteCacheGroup(@Context final HttpServletResponse httpServletResponse,
+                                                         final RestDeleteCacheGroupRequest request) {
+
+        try {
+            cacheClusterService.deleteCacheGroup(request.getCacheGroupName());
+            RestDeleteCacheGroupResponse response = new RestDeleteCacheGroupResponse();
+            response.setMessage("success");
+            return response;
+        } catch (Exception e) {
+            logger.error("createCache failed", e);
+            return RestHelper.createErrorResponse(RestDeleteCacheGroupResponse.class, "add cache failed");
         }
     }
 }
