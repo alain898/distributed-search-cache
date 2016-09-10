@@ -31,7 +31,7 @@ public class ManagementController {
     CacheClusterService cacheClusterService = new CacheClusterService();
 
     @POST
-    @Path("/hosts")
+    @Path("/host")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestAddHostsResponse addHosts(@Context final HttpServletResponse httpServletResponse,
@@ -50,7 +50,7 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/caches/create")
+    @Path("/cache/create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestCreateCacheResponse createCache(@Context final HttpServletResponse httpServletResponse,
@@ -74,7 +74,7 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/caches/delete")
+    @Path("/cache/delete")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestDeleteCacheResponse deleteCache(@Context final HttpServletResponse httpServletResponse,
@@ -118,7 +118,7 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/cache_groups/update")
+    @Path("/cache_group/update")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestAlterCacheGroupResponse updateCacheGroup(@Context final HttpServletResponse httpServletResponse,
@@ -138,7 +138,7 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/cache_groups/delete")
+    @Path("/cache_group/delete")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestDeleteCacheGroupResponse deleteCacheGroup(@Context final HttpServletResponse httpServletResponse,

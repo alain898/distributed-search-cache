@@ -189,6 +189,10 @@ public class CacheClusterService {
         return null;
     }
 
+    public List<Host> getHosts(){
+        return cacheCluster.getHosts();
+    }
+
     public CacheGroupMeta getCacheGroupMeta(String name) {
         for (CacheGroupMeta cacheGroup : cacheCluster.getCacheGroups()) {
             if (cacheGroup.getCacheGroupName().equals(name)) {

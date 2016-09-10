@@ -1,10 +1,16 @@
 package com.maxent.dscache.cache.client;
 
-import com.maxent.dscache.cache.CacheClusterService;
-import com.maxent.dscache.cache.CacheGroupMeta;
-import com.maxent.dscache.cache.CacheMeta;
-import com.maxent.dscache.cache.ICacheEntry;
-import com.maxent.dscache.cache.client.response.CacheSearchResponse;
+import com.maxent.dscache.api.rest.request.RestCreateCacheGroupRequest;
+import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
+import com.maxent.dscache.api.rest.request.RestDeleteCacheGroupRequest;
+import com.maxent.dscache.api.rest.request.RestDeleteCacheRequest;
+import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
+import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
+import com.maxent.dscache.api.rest.response.RestDeleteCacheGroupResponse;
+import com.maxent.dscache.api.rest.response.RestDeleteCacheResponse;
+import com.maxent.dscache.cache.*;
+import com.maxent.dscache.cache.client.response.*;
+import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.partitioner.IPartitioner;
 
@@ -17,9 +23,9 @@ public class CacheGroupClient {
     private CacheClusterService clusterCenter;
     private CacheClient cacheClient;
 
-    public CacheGroupClient(CacheClusterService clusterCenter, CacheClient cacheClient) {
+    public CacheGroupClient(CacheClusterService clusterCenter) {
         this.clusterCenter = clusterCenter;
-        this.cacheClient = cacheClient;
+        this.cacheClient = new CacheClient(clusterCenter);
     }
 
     public CacheSearchResponse search(String cacheGroupName, ICacheEntry entry) {
@@ -33,13 +39,43 @@ public class CacheGroupClient {
         return cacheClient.search(cacheMeta.getName(), entry);
     }
 
-    public void create(String cacheGroupName,
-                       String entryClassName,
-                       int cachesNumber,
-                       int subCachesPerCache,
-                       int partitionsPerSubCache,
-                       int blockCapacity,
-                       int blocksPerPartition) {
+    public CreateCacheGroupResponse create(String cacheGroupName,
+                                           String entryClassName,
+                                           int cachesNumber,
+                                           int subCachesPerCache,
+                                           int partitionsPerSubCache,
+                                           int blockCapacity,
+                                           int blocksPerPartition) {
+        Host host = clusterCenter.getHosts().get(0);
 
+        String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+        String path = "/management/cache_group/create";
+        HttpClient httpClient = new HttpClient();
+        RestCreateCacheGroupRequest request = new RestCreateCacheGroupRequest();
+        request.setCacheGroupName(cacheGroupName);
+        request.setEntryClassName(entryClassName);
+        request.setCachesNumber(cachesNumber);
+        request.setSubCachesPerCache(subCachesPerCache);
+        request.setPartitionsPerSubCache(partitionsPerSubCache);
+        request.setBlockCapacity(blockCapacity);
+        request.setBlocksPerPartition(blocksPerPartition);
+
+        RestCreateCacheGroupResponse response =
+                httpClient.post(url, path, request, RestCreateCacheGroupResponse.class);
+        return new CreateCacheGroupResponse(response.getMessage());
+    }
+
+    public CacheGroupDeleteResponse delete(String cacheGroupName) throws Exception {
+        Host host = clusterCenter.getHosts().get(0);
+
+        String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+        String path = "/management/cache_group/delete";
+        HttpClient httpClient = new HttpClient();
+        RestDeleteCacheGroupRequest request = new RestDeleteCacheGroupRequest();
+        request.setCacheGroupName(cacheGroupName);
+
+        RestDeleteCacheGroupResponse response =
+                httpClient.post(url, path, request, RestDeleteCacheGroupResponse.class);
+        return new CacheGroupDeleteResponse(response.getMessage());
     }
 }
