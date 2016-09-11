@@ -14,7 +14,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.KeeperException;
@@ -44,6 +43,8 @@ public class CacheClusterService {
 
     private final String CACHE_CLUSTER_INITIAL_VERSION = "0";
 
+    InterProcessReadWriteLock clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
+
     // just for local cache, it should updated when zookeeper changed.
     private volatile CacheClusterMeta cacheCluster;
 
@@ -54,6 +55,8 @@ public class CacheClusterService {
             zkClient.start();
 
             initClusterIfNot();
+
+            clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
 
             cacheCluster = getCacheClusterMeta();
         } catch (Exception e) {
@@ -188,20 +191,20 @@ public class CacheClusterService {
             cacheGroupMeta.setCacheMetas(cachesInGroup);
             cacheGroupMetas.add(cacheGroupMeta);
         }
+        cacheClusterMeta.setCacheGroups(cacheGroupMetas);
         return cacheClusterMeta;
     }
 
     public CacheClusterMeta getCacheClusterMeta() throws Exception {
-        InterProcessReadWriteLock lock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
-        lock.readLock().acquire();
+        clusterGlobalLock.readLock().acquire();
         try {
             return doGetCacheClusterMeta();
         } finally {
-            // don't worry, if zookeeper connection closed, the lock will release by zookeeper.
+            // don't worry, if zookeeper connection closed, the clusterGlobalLock will release by zookeeper.
             try {
-                lock.readLock().release();
+                clusterGlobalLock.readLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -321,8 +324,7 @@ public class CacheClusterService {
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition)
             throws Exception {
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
@@ -369,9 +371,9 @@ public class CacheClusterService {
 
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -384,8 +386,7 @@ public class CacheClusterService {
     }
 
     public void addHosts(List<Host> newHosts) throws Exception {
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
@@ -404,23 +405,14 @@ public class CacheClusterService {
             }
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
     }
 
     public void initClusterIfNot() throws CacheCheckFailureException, CacheInitializeFailureException {
-        try {
-            if (zkClient.checkExists().forPath(CACHE_CLUSTER_PATH) != null) {
-                return;
-            }
-        } catch (Exception e) {
-            throw new CacheCheckFailureException(
-                    String.format("failed to checkExists for path[%s]", CACHE_CLUSTER_PATH), e);
-        }
-
         try {
             try {
                 zkClient.create().forPath(CACHE_CLUSTER_PATH);
@@ -429,19 +421,25 @@ public class CacheClusterService {
                 zkClient.setData().forPath(CACHE_CLUSTER_PATH,
                         JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
             } catch (KeeperException.NodeExistsException e) {
-                logger.warn(String.format("zookeeper node[%s] exist", CACHE_CLUSTER_PATH), e);
+                logger.info(String.format("zookeeper node[%s] exist", CACHE_CLUSTER_PATH));
             }
 
             try {
                 zkClient.create().forPath(CACHES_PATH);
             } catch (KeeperException.NodeExistsException e) {
-                logger.warn(String.format("zookeeper node[%s] exist", CACHES_PATH), e);
+                logger.info(String.format("zookeeper node[%s] exist", CACHES_PATH));
             }
 
             try {
                 zkClient.create().forPath(HOSTS_PATH);
             } catch (KeeperException.NodeExistsException e) {
-                logger.warn(String.format("zookeeper node[%s] exist", HOSTS_PATH), e);
+                logger.info(String.format("zookeeper node[%s] exist", HOSTS_PATH));
+            }
+
+            try {
+                zkClient.create().forPath(CACHE_GROUPS_PATH);
+            } catch (KeeperException.NodeExistsException e) {
+                logger.info(String.format("zookeeper node[%s] exist", CACHE_GROUPS_PATH));
             }
         } catch (Exception e) {
             throw new CacheInitializeFailureException("failed to check cluster", e);
@@ -450,8 +448,7 @@ public class CacheClusterService {
 
     public void updateCacheGroup(String cacheGroupName,
                                  int addedCaches) throws Exception {
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
@@ -483,9 +480,9 @@ public class CacheClusterService {
 
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -498,8 +495,7 @@ public class CacheClusterService {
                                  int partitionsPerSubCache,
                                  int blocksPerPartition,
                                  int blockCapacity) throws Exception {
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
@@ -534,16 +530,15 @@ public class CacheClusterService {
 
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
     }
 
     private void doCreateCacheGroupInZookeeper(CacheGroupMeta cacheGroupMeta) throws Exception {
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
 
@@ -570,9 +565,9 @@ public class CacheClusterService {
 
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
 
@@ -580,8 +575,7 @@ public class CacheClusterService {
 
 
     private void doAddCacheInCacheGroup(CacheGroupMeta cacheGroupMeta, List<CacheMeta> newCacheMetas) throws Exception {
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             List<CacheMeta> allCacheMetas = new ArrayList<>();
             allCacheMetas.addAll(cacheGroupMeta.getCacheMetas());
@@ -613,17 +607,16 @@ public class CacheClusterService {
 
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
 
     }
 
     public void deleteCacheGroup(String cacheGroupName) throws Exception {
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
@@ -642,9 +635,9 @@ public class CacheClusterService {
 
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -658,8 +651,7 @@ public class CacheClusterService {
 
     public void deleteCache(String cacheName) throws Exception {
         HttpClient httpClient = new HttpClient();
-        InterProcessMutex lock = new InterProcessMutex(zkClient, CACHE_CLUSTER_PATH);
-        lock.acquire();
+        clusterGlobalLock.writeLock().acquire();
         try {
             CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
@@ -692,9 +684,9 @@ public class CacheClusterService {
 
         } finally {
             try {
-                lock.release();
+                clusterGlobalLock.writeLock().release();
             } catch (Exception e) {
-                logger.error(String.format("failed to release lock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
     }

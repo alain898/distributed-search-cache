@@ -92,7 +92,7 @@ public class ManagementController {
     }
 
     @POST
-    @Path("/cache_groups/create")
+    @Path("/cache_group/create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestCreateCacheGroupResponse createCacheGroup(@Context final HttpServletResponse httpServletResponse,
