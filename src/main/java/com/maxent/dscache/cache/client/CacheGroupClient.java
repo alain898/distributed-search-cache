@@ -18,16 +18,16 @@ import java.util.List;
  * Created by alain on 16/9/5.
  */
 public class CacheGroupClient {
-    private CacheClusterService clusterCenter;
+    private CacheClusterViewer cacheClusterViewer;
     private CacheClient cacheClient;
 
-    public CacheGroupClient(CacheClusterService clusterCenter) {
-        this.clusterCenter = clusterCenter;
-        this.cacheClient = new CacheClient(clusterCenter);
+    public CacheGroupClient(CacheClusterViewer cacheClusterViewer) {
+        this.cacheClusterViewer = cacheClusterViewer;
+        this.cacheClient = new CacheClient(cacheClusterViewer);
     }
 
     public CacheSearchResponse search(String cacheGroupName, ICacheEntry entry) {
-        CacheGroupMeta cacheGroupMeta = clusterCenter.getCacheGroupMeta(cacheGroupName);
+        CacheGroupMeta cacheGroupMeta = cacheClusterViewer.getCacheGroupMeta(cacheGroupName);
         String key = entry.key();
         IPartitioner partitioner = new HashPartitioner(cacheGroupMeta.getCacheGroupCapacity());
         int partition = partitioner.getPartition(key);
@@ -44,7 +44,7 @@ public class CacheGroupClient {
                                            int partitionsPerSubCache,
                                            int blockCapacity,
                                            int blocksPerPartition) {
-        Host host = clusterCenter.getHosts().get(0);
+        Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
         String path = "/management/cache_group/create";
@@ -64,7 +64,7 @@ public class CacheGroupClient {
     }
 
     public CacheGroupDeleteResponse delete(String cacheGroupName) throws Exception {
-        Host host = clusterCenter.getHosts().get(0);
+        Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
         String path = "/management/cache_group/delete";

@@ -326,7 +326,6 @@ public class CacheClusterService {
                                  int blockCapacity) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            cacheClusterViewer.flushCacheClusterMeta();
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             for (CacheGroupMeta cacheGroup : cacheGroups) {
