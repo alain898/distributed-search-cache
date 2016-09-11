@@ -5,7 +5,6 @@ import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +24,7 @@ public enum SubCacheService implements IService {
 
     private final Object lock = new Object();
     private Map<String, Map<String, SubCache<ICacheEntry>>> caches = new ConcurrentHashMap<>();
+    private final CacheClusterViewer cacheClusterViewer;
 
     private final Host host;
 
@@ -33,6 +33,8 @@ public enum SubCacheService implements IService {
             //String ip = InetAddress.getLocalHost().getHostAddress();
             String ip = "127.0.0.1";
             this.host = new Host(ip, DEFAULT_REST_SERVER_PORT);
+
+            cacheClusterViewer = new CacheClusterViewer();
             restoreCaches();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -40,63 +42,53 @@ public enum SubCacheService implements IService {
     }
 
 
+    /**
+     * restore caches before service start, so no need lock cache cluster
+     */
     private void restoreCaches() throws Exception {
-        CacheClusterService cacheClusterService = new CacheClusterService();
-        InterProcessReadWriteLock clusterLock = cacheClusterService.getClusterReadWriteLock();
-        clusterLock.readLock().acquire();
-
-        try {
-            CacheClusterMeta cacheClusterMeta = cacheClusterService.doGetCacheClusterMeta();
-            List<Host> hosts = cacheClusterMeta.getHosts();
-            if (hosts == null) {
-                return;
+        CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
+        List<Host> hosts = cacheClusterMeta.getHosts();
+        if (hosts == null) {
+            return;
+        }
+        for (Host h : hosts) {
+            if (host.equals(h)) {
+                host.setId(h.getId());
             }
-            for (Host h : hosts) {
+        }
+        if (host.getId() == Host.INVALID_ID) {
+            return;
+        }
+
+        List<CacheMeta> cacheMetas = cacheClusterMeta.getCaches();
+        for (CacheMeta cacheMeta : cacheMetas) {
+            List<SubCacheMeta> subCacheMetas = cacheMeta.getSubCacheMetas();
+            int totalPartitionNumber = subCacheMetas.size() * cacheMeta.getPartitionsPerSubCache();
+            for (SubCacheMeta subCacheMeta : subCacheMetas) {
+                Host h = subCacheMeta.getReplicationMetas().get(0).getHost();
                 if (host.equals(h)) {
-                    host.setId(h.getId());
+                    String cacheName = cacheMeta.getName();
+                    String entryClassName = cacheMeta.getEntryClassName();
+                    String subCacheId = String.valueOf(subCacheMeta.getId());
+                    int partitions = cacheMeta.getPartitionsPerSubCache();
+                    int blocksPerPartition = cacheMeta.getBlocksPerPartition();
+                    int blockCapacity = cacheMeta.getBlockCapacity();
+                    createSubCache(cacheName, entryClassName, totalPartitionNumber, subCacheId,
+                            partitions, blocksPerPartition, blockCapacity);
+                    logger.info(String.format(
+                            "successfully create cacheName[%s], entryClassName[%s], subCacheId[%s], " +
+                                    "partitions[%d], blocksPerPartition[%d], blockCapacity[%d]",
+                            cacheName, entryClassName, subCacheId,
+                            partitions, blocksPerPartition, blockCapacity));
                 }
             }
-            if (host.getId() == Host.INVALID_ID) {
-                return;
-            }
+        }
 
-            List<CacheMeta> cacheMetas = cacheClusterMeta.getCaches();
-            for (CacheMeta cacheMeta : cacheMetas) {
-                List<SubCacheMeta> subCacheMetas = cacheMeta.getSubCacheMetas();
-                int totalPartitionNumber = subCacheMetas.size() * cacheMeta.getPartitionsPerSubCache();
-                for (SubCacheMeta subCacheMeta : subCacheMetas) {
-                    Host h = subCacheMeta.getReplicationMetas().get(0).getHost();
-                    if (host.equals(h)) {
-                        String cacheName = cacheMeta.getName();
-                        String entryClassName = cacheMeta.getEntryClassName();
-                        String subCacheId = String.valueOf(subCacheMeta.getId());
-                        int partitions = cacheMeta.getPartitionsPerSubCache();
-                        int blocksPerPartition = cacheMeta.getBlocksPerPartition();
-                        int blockCapacity = cacheMeta.getBlockCapacity();
-                        createSubCache(cacheName, entryClassName, totalPartitionNumber, subCacheId,
-                                partitions, blocksPerPartition, blockCapacity);
-                        logger.info(String.format(
-                                "successfully create cacheName[%s], entryClassName[%s], subCacheId[%s], " +
-                                        "partitions[%d], blocksPerPartition[%d], blockCapacity[%d]",
-                                cacheName, entryClassName, subCacheId,
-                                partitions, blocksPerPartition, blockCapacity));
-                    }
-                }
-            }
-
-            for (Map.Entry<String, Map<String, SubCache<ICacheEntry>>> cache : caches.entrySet()) {
-                Map<String, SubCache<ICacheEntry>> subCacheMap = cache.getValue();
-                for (Map.Entry<String, SubCache<ICacheEntry>> subCacheEntry : subCacheMap.entrySet()) {
-                    SubCache<ICacheEntry> subCache = subCacheEntry.getValue();
-                    subCache.warmUp();
-                }
-            }
-
-        } finally {
-            try {
-                clusterLock.readLock().release();
-            } catch (Exception e) {
-                logger.error("failed to release clusterLock", e);
+        for (Map.Entry<String, Map<String, SubCache<ICacheEntry>>> cache : caches.entrySet()) {
+            Map<String, SubCache<ICacheEntry>> subCacheMap = cache.getValue();
+            for (Map.Entry<String, SubCache<ICacheEntry>> subCacheEntry : subCacheMap.entrySet()) {
+                SubCache<ICacheEntry> subCache = subCacheEntry.getValue();
+                subCache.warmUp();
             }
         }
     }
@@ -222,8 +214,7 @@ public enum SubCacheService implements IService {
 
         ICacheEntry queryEntry = JsonUtils.fromMap(query, cacheEntryClass);
 
-        return subCache.search(queryEntry,SearchPolicy.valueOf(searchPolicy));
-
+        return subCache.search(queryEntry, SearchPolicy.valueOf(searchPolicy), SearchMode.valueOf(searchMode));
     }
 
     @Override

@@ -45,6 +45,8 @@ public class CacheClusterService {
 
     InterProcessReadWriteLock clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
 
+    private final CacheClusterViewer cacheClusterViewer;
+
     // just for local cache, it should updated when zookeeper changed.
     private volatile CacheClusterMeta cacheCluster;
 
@@ -58,186 +60,22 @@ public class CacheClusterService {
 
             clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
 
-            cacheCluster = getCacheClusterMeta();
+            cacheClusterViewer = new CacheClusterViewer();
+
+            cacheCluster = cacheClusterViewer.doGetCacheClusterMeta();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     public void close() {
+        cacheClusterViewer.close();
         zkClient.close();
     }
 
-    /**
-     * cache_cluster
-     * ├── caches
-     * │   ├── cache1
-     * │   │   ├── subcache1
-     * │   │   │   ├── replication1
-     * │   │   │   └── replication2
-     * │   │   └── subcache2
-     * │   └── cache2
-     * └── hosts
-     *
-     * @throws Exception
-     */
-    public CacheClusterMeta doGetCacheClusterMeta() throws Exception {
-        CacheClusterMeta cacheClusterMeta = new CacheClusterMeta();
-
-        CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
-                CacheClusterZnode.class);
-
-        /**
-         * restore cluster version
-         */
-        cacheClusterMeta.setVersion(cacheClusterZnode.getVersion());
-
-        /**
-         * restore hosts
-         */
-        List<Host> hosts = new ArrayList<>();
-        List<String> hostsPath = zkClient.getChildren().forPath(HOSTS_PATH);
-        for (String hostPath : hostsPath) {
-            String fullHostPath = StringUtils.join(HOSTS_PATH, "/", hostPath);
-            Host host = JsonUtils.fromJson(
-                    new String(zkClient.getData().forPath(fullHostPath), Charsets.UTF_8),
-                    Host.class);
-            hosts.add(host.getId(), host);
-        }
-        cacheClusterMeta.setHosts(hosts);
-
-
-        /**
-         * restore caches
-         */
-        List<CacheMeta> caches = new ArrayList<>();
-        List<String> cachesPath = zkClient.getChildren().forPath(CACHES_PATH);
-        for (String cachePath : cachesPath) {
-            String fullCachePath = StringUtils.join(CACHES_PATH, "/", cachePath);
-            CacheZnode cacheZnode = JsonUtils.fromJson(
-                    new String(zkClient.getData().forPath(fullCachePath), Charsets.UTF_8),
-                    CacheZnode.class);
-
-            List<SubCacheMeta> subCaches = new ArrayList<>();
-            List<String> subCachesPath = zkClient.getChildren().forPath(fullCachePath);
-            for (String subCachePath : subCachesPath) {
-                String fullSubCachePath = StringUtils.join(fullCachePath, "/", subCachePath);
-                SubCacheZnode subCacheZnode = JsonUtils.fromJson(
-                        new String(zkClient.getData().forPath(fullSubCachePath), Charsets.UTF_8),
-                        SubCacheZnode.class);
-                SubCacheMeta subCacheMeta = new SubCacheMeta();
-                subCacheMeta.setId(subCacheZnode.getId());
-                List<ReplicationMeta> replications = new ArrayList<>();
-                List<String> replicationsPath = zkClient.getChildren().forPath(fullSubCachePath);
-                for (String replicationPath : replicationsPath) {
-                    String fullReplicationPath = StringUtils.join(fullSubCachePath, "/", replicationPath);
-                    ReplicationZnode replicationZnode = JsonUtils.fromJson(
-                            new String(zkClient.getData().forPath(fullReplicationPath), Charsets.UTF_8),
-                            ReplicationZnode.class);
-                    ReplicationMeta replicationMeta = new ReplicationMeta();
-                    replicationMeta.setId(replicationZnode.getId());
-                    replicationMeta.setHost(hosts.get(replicationZnode.getHostId()));
-                    replicationMeta.setZkNodeName(replicationPath);
-                    replications.add(replicationMeta);
-                }
-                subCacheMeta.setReplicationMetas(replications);
-                subCaches.add(subCacheMeta);
-            }
-
-            CacheMeta cacheMeta = new CacheMeta();
-            cacheMeta.setVersion(cacheZnode.getVersion());
-            cacheMeta.setName(cacheZnode.getName());
-            cacheMeta.setPartitionsPerSubCache(cacheZnode.getPartitionsPerSubCache());
-            cacheMeta.setBlocksPerPartition(cacheZnode.getBlocksPerPartition());
-            cacheMeta.setBlockCapacity(cacheZnode.getBlockCapacity());
-            cacheMeta.setEntryClassName(cacheZnode.getEntryClassName());
-            cacheMeta.setEntryClass(ClassUtils.loadClass(cacheZnode.getEntryClassName(), ICacheEntry.class));
-            cacheMeta.setSubCacheMetas(subCaches);
-            int partitions = cacheZnode.getPartitionsPerSubCache() * subCachesPath.size();
-            cacheMeta.setPartitioner(new HashPartitioner(partitions));
-
-            caches.add(cacheMeta);
-        }
-        cacheClusterMeta.setCaches(caches);
-
-        /**
-         * restore cache groups
-         */
-        List<CacheGroupMeta> cacheGroupMetas = new ArrayList<>();
-        List<String> cacheGroups = zkClient.getChildren().forPath(CACHE_GROUPS_PATH);
-        for (String cacheGroupPath : cacheGroups) {
-            String fullCacheGroupPath = StringUtils.join(CACHE_GROUPS_PATH, "/", cacheGroupPath);
-            CacheGroupZnode cacheGroupZnode = JsonUtils.fromJson(
-                    new String(zkClient.getData().forPath(fullCacheGroupPath), Charsets.UTF_8),
-                    CacheGroupZnode.class);
-
-            List<CacheMeta> cachesInGroup = new ArrayList<>();
-            List<String> cacheNames = zkClient.getChildren().forPath(fullCacheGroupPath);
-            for (String cacheName : cacheNames) {
-                cachesInGroup.add(getCache(cacheClusterMeta, cacheName));
-            }
-
-            CacheGroupMeta cacheGroupMeta = new CacheGroupMeta();
-            cacheGroupMeta.setCacheGroupName(cacheGroupZnode.getCacheGroupName());
-            cacheGroupMeta.setEntryClassName(cacheGroupZnode.getEntryClassName());
-            cacheGroupMeta.setSubCachesPerCache(cacheGroupZnode.getSubCachesPerCache());
-            cacheGroupMeta.setCacheGroupCapacity(cacheGroupZnode.getCacheGroupCapacity());
-            cacheGroupMeta.setPartitionsPerSubCache(cacheGroupZnode.getPartitionsPerSubCache());
-            cacheGroupMeta.setBlocksPerPartition(cacheGroupZnode.getBlocksPerPartition());
-            cacheGroupMeta.setBlockCapacity(cacheGroupZnode.getBlockCapacity());
-            cacheGroupMeta.setCurrentCachesNumber(cacheGroupZnode.getCurrentCachesNumber());
-            cacheGroupMeta.setLastCachesNumber(cacheGroupZnode.getLastCachesNumber());
-            cacheGroupMeta.setCacheMetas(cachesInGroup);
-            cacheGroupMetas.add(cacheGroupMeta);
-        }
-        cacheClusterMeta.setCacheGroups(cacheGroupMetas);
-        return cacheClusterMeta;
-    }
-
-    public CacheClusterMeta getCacheClusterMeta() throws Exception {
-        clusterGlobalLock.readLock().acquire();
-        try {
-            return doGetCacheClusterMeta();
-        } finally {
-            // don't worry, if zookeeper connection closed, the clusterGlobalLock will release by zookeeper.
-            try {
-                clusterGlobalLock.readLock().release();
-            } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
-            }
-        }
-    }
-
+    // TODO: can not let out inner-class lock
     public InterProcessReadWriteLock getClusterReadWriteLock() {
         return new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
-    }
-
-
-    private CacheMeta getCache(CacheClusterMeta cacheCluster, String name) {
-        for (CacheMeta cache : cacheCluster.getCaches()) {
-            if (cache.getName().equals(name)) {
-                return cache;
-            }
-        }
-        return null;
-    }
-
-    public CacheMeta getCache(String name) {
-        return getCache(cacheCluster, name);
-    }
-
-    public List<Host> getHosts() {
-        return cacheCluster.getHosts();
-    }
-
-    public CacheGroupMeta getCacheGroupMeta(String name) {
-        for (CacheGroupMeta cacheGroup : cacheCluster.getCacheGroups()) {
-            if (cacheGroup.getCacheGroupName().equals(name)) {
-                return cacheGroup;
-            }
-        }
-        return null;
     }
 
     private void createSubCachesInCluster(CacheMeta cacheMeta) throws CacheCreateFailureException {
@@ -328,7 +166,7 @@ public class CacheClusterService {
             throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
             for (CacheMeta cache : caches) {
@@ -390,7 +228,7 @@ public class CacheClusterService {
     public void addHosts(List<Host> newHosts) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
             for (Host newHost : newHosts) {
                 if (hosts.contains(newHost)) {
@@ -452,7 +290,7 @@ public class CacheClusterService {
                                  int addedCaches) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             CacheGroupMeta cacheGroupMeta = null;
             for (CacheGroupMeta cacheGroup : cacheGroups) {
@@ -499,7 +337,7 @@ public class CacheClusterService {
                                  int blockCapacity) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             for (CacheGroupMeta cacheGroup : cacheGroups) {
                 if (cacheGroup.getCacheGroupName().equals(cacheGroupName)) {
@@ -620,7 +458,7 @@ public class CacheClusterService {
     public void deleteCacheGroup(String cacheGroupName) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             CacheGroupMeta cacheGroupMeta = null;
             for (CacheGroupMeta cacheGroup : cacheGroups) {
@@ -655,7 +493,7 @@ public class CacheClusterService {
         HttpClient httpClient = new HttpClient();
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
             CacheMeta cacheMeta = null;
             for (CacheMeta cache : caches) {
