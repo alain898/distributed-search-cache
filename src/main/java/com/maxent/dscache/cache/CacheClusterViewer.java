@@ -56,8 +56,7 @@ public class CacheClusterViewer {
         zkClient.close();
     }
 
-
-    public CacheClusterMeta doGetCacheClusterMeta() throws Exception {
+    private CacheClusterMeta doGetCacheClusterMeta() throws Exception {
         CacheClusterMeta cacheClusterMeta = new CacheClusterMeta();
 
         CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(

@@ -7,7 +7,6 @@ import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteSubCacheResponse;
 import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.http.HttpClient;
-import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -47,9 +46,6 @@ public class CacheClusterService {
 
     private final CacheClusterViewer cacheClusterViewer;
 
-    // just for local cache, it should updated when zookeeper changed.
-    private volatile CacheClusterMeta cacheCluster;
-
     public CacheClusterService() throws RuntimeException {
         try {
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
@@ -61,8 +57,6 @@ public class CacheClusterService {
             clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
 
             cacheClusterViewer = new CacheClusterViewer();
-
-            cacheCluster = cacheClusterViewer.doGetCacheClusterMeta();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -71,11 +65,6 @@ public class CacheClusterService {
     public void close() {
         cacheClusterViewer.close();
         zkClient.close();
-    }
-
-    // TODO: can not let out inner-class lock
-    public InterProcessReadWriteLock getClusterReadWriteLock() {
-        return new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
     }
 
     private void createSubCachesInCluster(CacheMeta cacheMeta) throws CacheCreateFailureException {
@@ -166,7 +155,7 @@ public class CacheClusterService {
             throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
             for (CacheMeta cache : caches) {
@@ -218,7 +207,7 @@ public class CacheClusterService {
         }
     }
 
-    public void doAddHost(Host host) throws Exception {
+    private void doAddHost(Host host) throws Exception {
         String hostPath = StringUtils.join(
                 HOSTS_PATH, "/", String.format("%s%d", HOST_PATH_PREFIX, host.getId()));
         zkClient.create().forPath(hostPath);
@@ -228,7 +217,7 @@ public class CacheClusterService {
     public void addHosts(List<Host> newHosts) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
             for (Host newHost : newHosts) {
                 if (hosts.contains(newHost)) {
@@ -252,7 +241,7 @@ public class CacheClusterService {
         }
     }
 
-    public void initClusterIfNot() throws CacheCheckFailureException, CacheInitializeFailureException {
+    private void initClusterIfNot() throws CacheCheckFailureException, CacheInitializeFailureException {
         try {
             try {
                 zkClient.create().forPath(CACHE_CLUSTER_PATH);
@@ -290,7 +279,7 @@ public class CacheClusterService {
                                  int addedCaches) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             CacheGroupMeta cacheGroupMeta = null;
             for (CacheGroupMeta cacheGroup : cacheGroups) {
@@ -337,7 +326,8 @@ public class CacheClusterService {
                                  int blockCapacity) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
+            cacheClusterViewer.flushCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             for (CacheGroupMeta cacheGroup : cacheGroups) {
                 if (cacheGroup.getCacheGroupName().equals(cacheGroupName)) {
@@ -458,7 +448,7 @@ public class CacheClusterService {
     public void deleteCacheGroup(String cacheGroupName) throws Exception {
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             CacheGroupMeta cacheGroupMeta = null;
             for (CacheGroupMeta cacheGroup : cacheGroups) {
@@ -493,7 +483,7 @@ public class CacheClusterService {
         HttpClient httpClient = new HttpClient();
         clusterGlobalLock.writeLock().acquire();
         try {
-            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.doGetCacheClusterMeta();
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
             CacheMeta cacheMeta = null;
             for (CacheMeta cache : caches) {
