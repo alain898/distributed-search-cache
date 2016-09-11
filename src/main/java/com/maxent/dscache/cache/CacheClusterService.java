@@ -157,6 +157,37 @@ public class CacheClusterService {
             caches.add(cacheMeta);
         }
         cacheClusterMeta.setCaches(caches);
+
+        /**
+         * restore cache groups
+         */
+        List<CacheGroupMeta> cacheGroupMetas = new ArrayList<>();
+        List<String> cacheGroups = zkClient.getChildren().forPath(CACHE_GROUPS_PATH);
+        for (String cacheGroupPath : cacheGroups) {
+            String fullCacheGroupPath = StringUtils.join(CACHE_GROUPS_PATH, "/", cacheGroupPath);
+            CacheGroupZnode cacheGroupZnode = JsonUtils.fromJson(
+                    new String(zkClient.getData().forPath(fullCacheGroupPath), Charsets.UTF_8),
+                    CacheGroupZnode.class);
+
+            List<CacheMeta> cachesInGroup = new ArrayList<>();
+            List<String> cacheNames = zkClient.getChildren().forPath(fullCacheGroupPath);
+            for (String cacheName : cacheNames) {
+                cachesInGroup.add(getCache(cacheClusterMeta, cacheName));
+            }
+
+            CacheGroupMeta cacheGroupMeta = new CacheGroupMeta();
+            cacheGroupMeta.setCacheGroupName(cacheGroupZnode.getCacheGroupName());
+            cacheGroupMeta.setEntryClassName(cacheGroupZnode.getEntryClassName());
+            cacheGroupMeta.setSubCachesPerCache(cacheGroupZnode.getSubCachesPerCache());
+            cacheGroupMeta.setCacheGroupCapacity(cacheGroupZnode.getCacheGroupCapacity());
+            cacheGroupMeta.setPartitionsPerSubCache(cacheGroupZnode.getPartitionsPerSubCache());
+            cacheGroupMeta.setBlocksPerPartition(cacheGroupZnode.getBlocksPerPartition());
+            cacheGroupMeta.setBlockCapacity(cacheGroupZnode.getBlockCapacity());
+            cacheGroupMeta.setCurrentCachesNumber(cacheGroupZnode.getCurrentCachesNumber());
+            cacheGroupMeta.setLastCachesNumber(cacheGroupZnode.getLastCachesNumber());
+            cacheGroupMeta.setCacheMetas(cachesInGroup);
+            cacheGroupMetas.add(cacheGroupMeta);
+        }
         return cacheClusterMeta;
     }
 
@@ -180,7 +211,7 @@ public class CacheClusterService {
     }
 
 
-    public CacheMeta getCache(String name) {
+    private CacheMeta getCache(CacheClusterMeta cacheCluster, String name) {
         for (CacheMeta cache : cacheCluster.getCaches()) {
             if (cache.getName().equals(name)) {
                 return cache;
@@ -189,7 +220,11 @@ public class CacheClusterService {
         return null;
     }
 
-    public List<Host> getHosts(){
+    public CacheMeta getCache(String name) {
+        return getCache(cacheCluster, name);
+    }
+
+    public List<Host> getHosts() {
         return cacheCluster.getHosts();
     }
 
@@ -512,10 +547,6 @@ public class CacheClusterService {
         try {
             CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
 
-            List<String> caches = new ArrayList<>();
-            for (CacheMeta cacheMeta : cacheGroupMeta.getCacheMetas()) {
-                caches.add(cacheMeta.getName());
-            }
             cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
             cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
             cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
@@ -525,7 +556,6 @@ public class CacheClusterService {
             cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
             cacheGroupZnode.setBlockCapacity(cacheGroupMeta.getBlockCapacity());
             cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
-            cacheGroupZnode.setCaches(caches);
 
             String name = cacheGroupZnode.getCacheGroupName();
             String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", name);
@@ -533,8 +563,8 @@ public class CacheClusterService {
             zkClient.setData().forPath(cacheGroupZkPath,
                     JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
 
-            for (String cache : caches) {
-                String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cache);
+            for (CacheMeta cacheMeta : cacheGroupMeta.getCacheMetas()) {
+                String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
                 zkClient.create().forPath(cacheZkPath);
             }
 
@@ -557,10 +587,6 @@ public class CacheClusterService {
             allCacheMetas.addAll(cacheGroupMeta.getCacheMetas());
             allCacheMetas.addAll(newCacheMetas);
 
-            List<String> allCaches = new ArrayList<>();
-            for (CacheMeta cacheMeta : allCacheMetas) {
-                allCaches.add(cacheMeta.getName());
-            }
 
             CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
             cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
@@ -572,15 +598,14 @@ public class CacheClusterService {
             cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
             cacheGroupZnode.setBlockCapacity(cacheGroupMeta.getBlockCapacity());
             cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
-            cacheGroupZnode.setCaches(allCaches);
 
             String name = cacheGroupZnode.getCacheGroupName();
             String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", name);
             zkClient.setData().forPath(cacheGroupZkPath,
                     JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
 
-            for (CacheMeta cache : newCacheMetas) {
-                String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cache.getName());
+            for (CacheMeta cacheMeta : allCacheMetas) {
+                String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
                 zkClient.create().forPath(cacheZkPath);
             }
 

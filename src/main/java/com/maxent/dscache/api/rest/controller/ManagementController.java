@@ -31,7 +31,7 @@ public class ManagementController {
     CacheClusterService cacheClusterService = new CacheClusterService();
 
     @POST
-    @Path("/host")
+    @Path("/hosts")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public RestAddHostsResponse addHosts(@Context final HttpServletResponse httpServletResponse,

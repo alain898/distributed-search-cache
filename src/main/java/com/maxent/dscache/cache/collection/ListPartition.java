@@ -1,11 +1,10 @@
 package com.maxent.dscache.cache.collection;
 
-import com.maxent.dscache.common.annotations.NotThreadSafe;
 import com.google.common.base.Preconditions;
+import com.maxent.dscache.common.annotations.NotThreadSafe;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 

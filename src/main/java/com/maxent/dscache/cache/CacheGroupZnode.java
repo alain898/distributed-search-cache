@@ -13,7 +13,6 @@ public class CacheGroupZnode {
     private int blocksPerPartition;
     private int blockCapacity;
     private int subCachesPerCache;
-    private List<String> caches;
     private int currentCachesNumber;    // 2^cm
     private int lastCachesNumber;       // 2^lm
 
@@ -25,14 +24,6 @@ public class CacheGroupZnode {
 
     public void setCacheGroupName(String cacheGroupName) {
         this.cacheGroupName = cacheGroupName;
-    }
-
-    public List<String> getCaches() {
-        return caches;
-    }
-
-    public void setCaches(List<String> caches) {
-        this.caches = caches;
     }
 
     public int getCacheGroupCapacity() {
