@@ -245,6 +245,7 @@ public class CacheClusterService {
         List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
 
         try {
+            int totalPartitionNumber = cacheMeta.getSubCacheMetas().size() * cacheMeta.getPartitionsPerSubCache();
             for (SubCacheMeta subCache : subCaches) {
                 ReplicationMeta meta = subCache.getReplicationMetas().get(0);
                 Host host = meta.getHost();
@@ -253,6 +254,7 @@ public class CacheClusterService {
                 RestCreateSubCacheRequest restCreateSubCacheRequest = new RestCreateSubCacheRequest();
                 restCreateSubCacheRequest.setName(cacheMeta.getName());
                 restCreateSubCacheRequest.setEntryClassName(cacheMeta.getEntryClassName());
+                restCreateSubCacheRequest.setTotalPartitionNumber(totalPartitionNumber);
                 restCreateSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
                 restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
                 restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());

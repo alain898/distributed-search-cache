@@ -60,7 +60,7 @@ public class SubCache<E extends ICacheEntry> {
 
     private volatile boolean shutdown = false;
 
-    private final CacheClusterService cacheClusterService;
+    private final CacheClusterViewer cacheClusterViewer;
 
     private final CacheClient cacheClient;
 
@@ -86,8 +86,8 @@ public class SubCache<E extends ICacheEntry> {
 
         this.persistFile = String.format("%s_%s", cacheName, subCacheId);
         this.flusher = PersistUtils.createFlusher(persistFile, DEFAULT_PERSIST_DIR, persistFile);
-        this.cacheClusterService = new CacheClusterService();
-        this.cacheClient = new CacheClient(this.cacheClusterService);
+        this.cacheClusterViewer = new CacheClusterViewer();
+        this.cacheClient = new CacheClient(this.cacheClusterViewer);
 
         logger.info(String.format("cacheName[%s], totalPartitionNumber[%d], cacheEntryClass[%s], subCacheId[%s]," +
                         "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
@@ -152,11 +152,11 @@ public class SubCache<E extends ICacheEntry> {
                 return Lists.newArrayList(Pair.of(entry, score));
             }
         }
-        CacheMeta cacheMeta = cacheClusterService.getCache(cacheName);
+        CacheMeta cacheMeta = cacheClusterViewer.getCache(cacheName);
         double usedPercent = partition.size() / (double) (blockCapacity * blockNumber);
         if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
             String forwardCacheName = cacheMeta.getForwardCache();
-            CacheMeta forwardCache = cacheClusterService.getCache(forwardCacheName);
+            CacheMeta forwardCache = cacheClusterViewer.getCache(forwardCacheName);
             CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
             if (CollectionUtils.isNotEmpty(response.getEntries())) {
                 return Lists.newArrayList(Pair.of((E) response.getEntries().get(0), response.getScores().get(0)));
@@ -181,11 +181,11 @@ public class SubCache<E extends ICacheEntry> {
                 results.add(Pair.of(entry, score));
             }
         }
-        CacheMeta cacheMeta = cacheClusterService.getCache(cacheName);
+        CacheMeta cacheMeta = cacheClusterViewer.getCache(cacheName);
         double usedPercent = partition.size() / (double) (blockCapacity * blockNumber);
         if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
             String forwardCacheName = cacheMeta.getForwardCache();
-            CacheMeta forwardCache = cacheClusterService.getCache(forwardCacheName);
+            CacheMeta forwardCache = cacheClusterViewer.getCache(forwardCacheName);
             CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
             if (CollectionUtils.isNotEmpty(response.getEntries())) {
                 results.addAll(Lists.newArrayList(
@@ -216,11 +216,11 @@ public class SubCache<E extends ICacheEntry> {
                 maxScoreEntry = entry;
             }
         }
-        CacheMeta cacheMeta = cacheClusterService.getCache(cacheName);
+        CacheMeta cacheMeta = cacheClusterViewer.getCache(cacheName);
         double usedPercent = partition.size() / (double) (blockCapacity * blockNumber);
         if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
             String forwardCacheName = cacheMeta.getForwardCache();
-            CacheMeta forwardCache = cacheClusterService.getCache(forwardCacheName);
+            CacheMeta forwardCache = cacheClusterViewer.getCache(forwardCacheName);
             CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
             if (CollectionUtils.isNotEmpty(response.getEntries())) {
                 if (response.getScores().get(0) > maxScore) {

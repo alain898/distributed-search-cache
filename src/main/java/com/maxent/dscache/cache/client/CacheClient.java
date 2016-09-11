@@ -18,16 +18,16 @@ import com.maxent.dscache.common.tools.JsonUtils;
  */
 public class CacheClient {
 
-    private CacheClusterService clusterCenter;
+    private CacheClusterViewer cacheClusterViewer;
 
-    public CacheClient(CacheClusterService clusterCenter) {
-        this.clusterCenter = clusterCenter;
+    public CacheClient(CacheClusterViewer cacheClusterViewer) {
+        this.cacheClusterViewer = cacheClusterViewer;
     }
 
     public CacheSearchResponse search(String cacheName, ICacheEntry entry) {
 
         String keys = entry.key();
-        CacheMeta cache = clusterCenter.getCache(cacheName);
+        CacheMeta cache = cacheClusterViewer.getCache(cacheName);
         int partition = cache.getPartitioner().getPartition(keys);
         int subCacheId = partition / cache.getPartitionsPerSubCache();
 
@@ -55,7 +55,7 @@ public class CacheClient {
     public CacheCreateResponse create(String name, String entryClassName,
                                       int subCaches, int partitionsPerSubCache,
                                       int blockCapacity, int blocksPerPartition) throws Exception {
-        Host host = clusterCenter.getHosts().get(0);
+        Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
         String path = "/management/cache/create";
@@ -79,7 +79,7 @@ public class CacheClient {
     }
 
     public CacheDeleteResponse delete(String cacheName) throws Exception {
-        Host host = clusterCenter.getHosts().get(0);
+        Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
         String path = "/management/cache/delete";
@@ -93,8 +93,8 @@ public class CacheClient {
     }
 
     public static void main(String[] args) {
-        CacheClusterService clusterService = new CacheClusterService();
-        CacheClient cacheClient = new CacheClient(clusterService);
+        CacheClusterViewer cacheClusterViewer = new CacheClusterViewer();
+        CacheClient cacheClient = new CacheClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
         testCacheEntry.setField1("field1");
         testCacheEntry.setField2("field2");
