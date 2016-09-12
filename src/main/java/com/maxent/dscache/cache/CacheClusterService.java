@@ -153,7 +153,7 @@ public class CacheClusterService {
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition)
             throws Exception {
-        clusterGlobalLock.writeLock().acquire();
+        lockIfVersionMatched();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
@@ -200,9 +200,42 @@ public class CacheClusterService {
 
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+            }
+        }
+    }
+
+    private void lockIfVersionMatched() throws Exception {
+        while (true) {
+            clusterGlobalLock.writeLock().acquire();
+            CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
+                    new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                    CacheClusterZnode.class);
+            String zkClusterVersion = cacheClusterZnode.getVersion();
+            String localClusterVersion = cacheClusterViewer.getCacheClusterMeta().getVersion();
+            if (StringUtils.equals(zkClusterVersion, localClusterVersion)) {
+                break;
+            } else {
+                clusterGlobalLock.writeLock().release();
+                Thread.sleep(100);
+            }
+        }
+    }
+
+    private void unlockIfVersionMatched() throws Exception {
+        while (true) {
+            CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
+                    new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                    CacheClusterZnode.class);
+            String zkClusterVersion = cacheClusterZnode.getVersion();
+            String localClusterVersion = cacheClusterViewer.getCacheClusterMeta().getVersion();
+            if (StringUtils.equals(zkClusterVersion, localClusterVersion)) {
+                clusterGlobalLock.writeLock().release();
+                break;
+            } else {
+                Thread.sleep(100);
             }
         }
     }
@@ -215,7 +248,7 @@ public class CacheClusterService {
     }
 
     public void addHosts(List<Host> newHosts) throws Exception {
-        clusterGlobalLock.writeLock().acquire();
+        lockIfVersionMatched();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
@@ -234,7 +267,7 @@ public class CacheClusterService {
             }
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
@@ -277,7 +310,7 @@ public class CacheClusterService {
 
     public void updateCacheGroup(String cacheGroupName,
                                  int addedCaches) throws Exception {
-        clusterGlobalLock.writeLock().acquire();
+        lockIfVersionMatched();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
@@ -309,7 +342,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
@@ -324,7 +357,7 @@ public class CacheClusterService {
                                  int partitionsPerSubCache,
                                  int blocksPerPartition,
                                  int blockCapacity) throws Exception {
-        clusterGlobalLock.writeLock().acquire();
+        lockIfVersionMatched();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
@@ -359,7 +392,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
@@ -367,7 +400,7 @@ public class CacheClusterService {
     }
 
     private void doCreateCacheGroupInZookeeper(CacheGroupMeta cacheGroupMeta) throws Exception {
-        clusterGlobalLock.writeLock().acquire();
+        lockIfVersionMatched();
         try {
             CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
 
@@ -394,7 +427,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
@@ -404,7 +437,7 @@ public class CacheClusterService {
 
 
     private void doAddCacheInCacheGroup(CacheGroupMeta cacheGroupMeta, List<CacheMeta> newCacheMetas) throws Exception {
-        clusterGlobalLock.writeLock().acquire();
+        lockIfVersionMatched();
         try {
             List<CacheMeta> allCacheMetas = new ArrayList<>();
             allCacheMetas.addAll(cacheGroupMeta.getCacheMetas());
@@ -436,7 +469,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
@@ -445,7 +478,7 @@ public class CacheClusterService {
     }
 
     public void deleteCacheGroup(String cacheGroupName) throws Exception {
-        clusterGlobalLock.writeLock().acquire();
+        lockIfVersionMatched();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
@@ -464,7 +497,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
@@ -479,8 +512,8 @@ public class CacheClusterService {
     }
 
     public void deleteCache(String cacheName) throws Exception {
+        lockIfVersionMatched();
         HttpClient httpClient = new HttpClient();
-        clusterGlobalLock.writeLock().acquire();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
@@ -513,7 +546,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                clusterGlobalLock.writeLock().release();
+                unlockIfVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
