@@ -8,7 +8,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +17,9 @@ import java.util.List;
 
 /**
  * Created by alain on 16/9/11.
+ * <p>
+ * CacheClusterViewer refreshed only if "/cache_cluster" version is changed.
+ * only ensure the final consistency, so cluster lock is no need.
  */
 public class CacheClusterViewer {
     private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
@@ -31,10 +33,13 @@ public class CacheClusterViewer {
     private final String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
     private final String CACHE_GROUPS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/cache_groups");
 
-    private final InterProcessReadWriteLock clusterGlobalLock;
+    private final long MONITOR_INTERVAL_MS = 1000L;
 
     private volatile CacheClusterMeta cacheCluster;
 
+    private final Thread monitorThread;
+
+    private volatile boolean closed = false;
 
     public CacheClusterViewer() throws RuntimeException {
         try {
@@ -42,17 +47,43 @@ public class CacheClusterViewer {
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
             zkClient.start();
 
-            clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
-
             cacheCluster = doGetCacheClusterMeta();
 
-            // TODO: add cluster change watcher
+            monitorThread = new Thread(new ClusterStatusMonitor());
+            monitorThread.start();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    private class ClusterStatusMonitor implements Runnable {
+        @Override
+        public void run() {
+            while (!closed) {
+                try {
+                    CacheClusterZnode cacheClusterZnode;
+                    cacheClusterZnode = JsonUtils.fromJson(
+                            new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                            CacheClusterZnode.class);
+                    String zkClusterVersion = cacheClusterZnode.getVersion();
+                    String localClusterVersion = cacheCluster.getVersion();
+                    if (StringUtils.equals(zkClusterVersion, localClusterVersion)) {
+                        Thread.sleep(MONITOR_INTERVAL_MS);
+                        continue;
+                    }
+                    cacheCluster = doGetCacheClusterMeta();
+                } catch (InterruptedException e) {
+                    break;
+                } catch (Exception e) {
+                    logger.error("exception", e);
+                }
+            }
+            logger.info("ClusterStatusMonitor exit");
+        }
+    }
+
     public void close() {
+        closed = true;
         zkClient.close();
     }
 
@@ -170,8 +201,12 @@ public class CacheClusterViewer {
         return cacheClusterMeta;
     }
 
-    public CacheClusterMeta getCacheClusterMeta() throws Exception {
+    public CacheClusterMeta getCacheClusterMeta() {
         return this.cacheCluster;
+    }
+
+    public CacheClusterMeta getFreshCacheClusterMeta() throws Exception {
+        return doGetCacheClusterMeta();
     }
 
     private CacheMeta getCache(CacheClusterMeta cacheCluster, String name) {

@@ -25,8 +25,10 @@ import java.util.List;
 /**
  * Created by alain on 16/8/20.
  */
-public class CacheClusterService {
-    private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
+public enum CacheClusterService implements IService {
+    INSTANCE;
+
+    private final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
 
     private static final long DEFAULT_START_VERSION = 0;
 
@@ -46,7 +48,7 @@ public class CacheClusterService {
 
     private final CacheClusterViewer cacheClusterViewer;
 
-    public CacheClusterService() throws RuntimeException {
+    CacheClusterService() throws RuntimeException {
         try {
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
@@ -149,6 +151,20 @@ public class CacheClusterService {
         }
     }
 
+    private String incVersion(String version) {
+        return String.valueOf(Integer.parseInt(version) + 1);
+    }
+
+    public void increaseClusterVersion() throws Exception {
+        CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
+                new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                CacheClusterZnode.class);
+        String zkClusterVersion = cacheClusterZnode.getVersion();
+        cacheClusterZnode.setVersion(incVersion(zkClusterVersion));
+        zkClient.setData().forPath(CACHE_GROUPS_PATH,
+                JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
+    }
+
     public CacheMeta createCache(String name, String entryClassName,
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition)
@@ -195,6 +211,9 @@ public class CacheClusterService {
 
             // 再改变集群在zookeeper中的状态
             doCreateCache(cacheMeta);
+
+            // 增加版本号
+            increaseClusterVersion();
 
             return cacheMeta;
 
@@ -265,6 +284,9 @@ public class CacheClusterService {
                 newHost.setId(newHostIdStart + i);
                 doAddHost(newHost);
             }
+
+            // 增加版本号
+            increaseClusterVersion();
         } finally {
             try {
                 unlockIfVersionMatched();
@@ -340,6 +362,9 @@ public class CacheClusterService {
 
             doAddCacheInCacheGroup(cacheGroupMeta, newCaches);
 
+            // 增加版本号
+            increaseClusterVersion();
+
         } finally {
             try {
                 unlockIfVersionMatched();
@@ -389,6 +414,9 @@ public class CacheClusterService {
             cacheGroupMeta.setBlockCapacity(blockCapacity);
 
             doCreateCacheGroupInZookeeper(cacheGroupMeta);
+
+            // 增加版本号
+            increaseClusterVersion();
 
         } finally {
             try {
@@ -551,6 +579,16 @@ public class CacheClusterService {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
+    }
+
+    @Override
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
+
     }
 }
 

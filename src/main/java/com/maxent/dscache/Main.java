@@ -2,6 +2,7 @@ package com.maxent.dscache;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.maxent.dscache.api.rest.RestResource;
+import com.maxent.dscache.cache.CacheClusterService;
 import com.maxent.dscache.cache.SubCacheService;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
@@ -57,6 +58,7 @@ public class Main implements Daemon {
             ServletContextHandler context = new ServletContextHandler(server, "/*");
             context.addServlet(servlet, "/*");
 
+            CacheClusterService.INSTANCE.start();
             SubCacheService.INSTANCE.start();
             server.start();
             logger.info("started successfully.");
@@ -74,7 +76,8 @@ public class Main implements Daemon {
             server.stop();
             server.join();
 
-            SubCacheService.INSTANCE.start();
+            SubCacheService.INSTANCE.stop();
+            CacheClusterService.INSTANCE.stop();
         } catch (Exception e) {
             logger.error(String.format("unexpected exception[%s]", ExceptionUtils.getStackTrace(e)));
             throw e;
