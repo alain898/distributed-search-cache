@@ -258,9 +258,12 @@ public class SubCache<E extends ICacheEntry> {
     }
 
     private class PersistWorker implements Runnable {
+        private long flushIntervalInMillis = 10 * 1000L;
+        private int bufferCapacity = 1024;
+        private long lastFlushTime = System.currentTimeMillis();
+
         @Override
         public void run() {
-            int bufferCapacity = 1024;
             List<E> buffer = new ArrayList<>(bufferCapacity);
             while (!shutdown) {
                 try {
@@ -268,7 +271,7 @@ public class SubCache<E extends ICacheEntry> {
                     if (entry != null) {
                         buffer.add(entry);
                     }
-                    if (buffer.size() == bufferCapacity) {
+                    if (buffer.size() == bufferCapacity || flushIntervalExpired()) {
                         flush(buffer);
                         buffer.clear();
                     }
@@ -281,6 +284,10 @@ public class SubCache<E extends ICacheEntry> {
                 flush(buffer);
                 buffer.clear();
             }
+        }
+
+        private boolean flushIntervalExpired() {
+            return (System.currentTimeMillis() - lastFlushTime) > flushIntervalInMillis;
         }
 
         private void flush(List<E> buffer) {
