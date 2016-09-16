@@ -42,6 +42,8 @@ public class SubCache<E extends ICacheEntry> {
 
     private static final String DEFAULT_PERSIST_DIR = "/services/data/dscache";
 
+    private static final String PERSIST_RECORD_SEPARATOR = ",";
+
     private final String cacheName;
     private final String subCacheId;
     private final Class<E> cacheEntryClass;
@@ -294,7 +296,7 @@ public class SubCache<E extends ICacheEntry> {
             if (buffer != null) {
                 for (E entry : buffer) {
                     long timestamp = System.currentTimeMillis();
-                    String content = Joiner.on(",").join(timestamp, JsonUtils.toJson(entry));
+                    String content = Joiner.on(PERSIST_RECORD_SEPARATOR).join(timestamp, JsonUtils.toJson(entry));
                     flusher.flush(content);
                 }
             }
@@ -325,7 +327,7 @@ public class SubCache<E extends ICacheEntry> {
                     new ReversedLinesFileReader(path.toFile(), Charsets.UTF_8);
             String line;
             while ((line = reversedLinesFileReader.readLine()) != null) {
-                String[] splits = line.split(",");
+                String[] splits = line.split(PERSIST_RECORD_SEPARATOR, 2);
                 if (splits.length == 2) {
                     try {
                         return Long.parseLong(splits[0]);
@@ -392,13 +394,12 @@ public class SubCache<E extends ICacheEntry> {
             LineIterator iterator = FileUtils.lineIterator(file.toFile(), Charsets.UTF_8.toString());
             while (iterator.hasNext()) {
                 String line = iterator.nextLine();
-                String[] splits = line.split(",");
-                if (splits.length != 2) {
-                    continue;
+                String[] splits = line.split(PERSIST_RECORD_SEPARATOR, 2);
+                if (splits.length == 2) {
+                    String entryJson = splits[1];
+                    E entry = JsonUtils.fromJson(entryJson, cacheEntryClass);
+                    saveWithoutPersist(entry);
                 }
-                String entryJson = splits[1];
-                E entry = JsonUtils.fromJson(entryJson, cacheEntryClass);
-                saveWithoutPersist(entry);
             }
         }
 
