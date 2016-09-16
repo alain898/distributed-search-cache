@@ -61,8 +61,7 @@ public class CacheClusterViewer {
         public void run() {
             while (!closed) {
                 try {
-                    CacheClusterZnode cacheClusterZnode;
-                    cacheClusterZnode = JsonUtils.fromJson(
+                    CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
                             new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
                             CacheClusterZnode.class);
                     String zkClusterVersion = cacheClusterZnode.getVersion();

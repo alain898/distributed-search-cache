@@ -161,7 +161,7 @@ public enum CacheClusterService implements IService {
                 CacheClusterZnode.class);
         String zkClusterVersion = cacheClusterZnode.getVersion();
         cacheClusterZnode.setVersion(incVersion(zkClusterVersion));
-        zkClient.setData().forPath(CACHE_GROUPS_PATH,
+        zkClient.setData().forPath(CACHE_CLUSTER_PATH,
                 JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
     }
 
