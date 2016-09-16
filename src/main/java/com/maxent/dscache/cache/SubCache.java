@@ -64,6 +64,8 @@ public class SubCache<E extends ICacheEntry> {
 
     private final CacheClient cacheClient;
 
+    private final Thread flushThread;
+
     public SubCache(String cacheName, Class<E> cacheEntryClass, int totalPartitionNumber, String subCacheId,
                     int partitionNumber, int blockCapacity, long blockNumber) {
         Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
@@ -88,6 +90,9 @@ public class SubCache<E extends ICacheEntry> {
         this.flusher = PersistUtils.createFlusher(persistFile, DEFAULT_PERSIST_DIR, persistFile);
         this.cacheClusterViewer = new CacheClusterViewer();
         this.cacheClient = new CacheClient(this.cacheClusterViewer);
+        this.flushThread = new Thread(new PersistWorker());
+
+        this.flushThread.start();
 
         logger.info(String.format("cacheName[%s], totalPartitionNumber[%d], cacheEntryClass[%s], subCacheId[%s]," +
                         "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
@@ -269,12 +274,12 @@ public class SubCache<E extends ICacheEntry> {
                     }
                 } catch (InterruptedException e) {
                     logger.warn("InterruptedException caught, exit");
-                    if (!buffer.isEmpty()) {
-                        flush(buffer);
-                        buffer.clear();
-                    }
                     break;
                 }
+            }
+            if (!buffer.isEmpty()) {
+                flush(buffer);
+                buffer.clear();
             }
         }
 
@@ -292,6 +297,8 @@ public class SubCache<E extends ICacheEntry> {
     public void clear() {
         partitions.forEach(IPartition::clear);
         partitions.clear();
+        shutdown = true;
+        flushThread.interrupt();
     }
 
     public void warmUp() {

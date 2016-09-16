@@ -5,7 +5,7 @@ import java.util.Map;
 /**
  * Created by alain on 16/8/30.
  */
-public class RestSaveEntryRequest {
+public class RestSubcacheSaveRequest {
     private String cacheName;
     private String subCacheId;
     private Map queryEntry;

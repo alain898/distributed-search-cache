@@ -2,11 +2,11 @@ package com.maxent.dscache.api.rest.controller;
 
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteSubCacheRequest;
-import com.maxent.dscache.api.rest.request.RestSaveEntryRequest;
+import com.maxent.dscache.api.rest.request.RestSubcacheSaveRequest;
 import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteSubCacheResponse;
-import com.maxent.dscache.api.rest.response.RestSaveEntryResponse;
+import com.maxent.dscache.api.rest.response.RestSubcacheSaveResponse;
 import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.ICacheEntry;
@@ -28,6 +28,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by alain on 16/8/17.
@@ -101,20 +102,20 @@ public class SubCacheController {
     @Path("/save")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public RestSaveEntryResponse save(@Context final HttpServletResponse httpServletResponse,
-                                      final RestSaveEntryRequest request) {
+    public RestSubcacheSaveResponse save(@Context final HttpServletResponse httpServletResponse,
+                                         final RestSubcacheSaveRequest request) {
         try {
             subCacheService.saveEntry(
                     request.getCacheName(),
                     request.getSubCacheId(),
                     request.getQueryEntry());
-            return new RestSaveEntryResponse("success");
+            return new RestSubcacheSaveResponse("success");
         } catch (Exception e) {
             String errInfo = String.format(
                     "failed to save, request[%s], exception[%s]",
                     JsonUtils.toJson(request), e.getMessage());
             logger.error(errInfo, e);
-            return RestHelper.createErrorResponse(RestSaveEntryResponse.class, errInfo);
+            return RestHelper.createErrorResponse(RestSubcacheSaveResponse.class, errInfo);
         }
     }
 
@@ -135,10 +136,10 @@ public class SubCacheController {
                 return new RestSubCacheSearchResponse();
             }
 
-            List<ICacheEntry> entries = new ArrayList<>();
+            List<Map> entries = new ArrayList<>();
             List<Double> scores = new ArrayList<>();
             for (Pair<ICacheEntry, Double> r : results) {
-                entries.add(r.getLeft());
+                entries.add(JsonUtils.toMap(r.getLeft()));
                 scores.add(r.getRight());
             }
 

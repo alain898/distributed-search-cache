@@ -1,9 +1,9 @@
 package com.maxent.dscache.api.rest.response;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.maxent.dscache.cache.ICacheEntry;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by alain on 16/8/26.
@@ -11,7 +11,7 @@ import java.util.List;
 @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 public class RestSubCacheSearchResponse extends RestCommonResponse {
     private List<Double> scores;
-    private List<ICacheEntry> entries;
+    private List<Map> entries;
 
     public List<Double> getScores() {
         return scores;
@@ -21,11 +21,11 @@ public class RestSubCacheSearchResponse extends RestCommonResponse {
         this.scores = scores;
     }
 
-    public List<ICacheEntry> getEntries() {
+    public List<Map> getEntries() {
         return entries;
     }
 
-    public void setEntries(List<ICacheEntry> entries) {
+    public void setEntries(List<Map> entries) {
         this.entries = entries;
     }
 }

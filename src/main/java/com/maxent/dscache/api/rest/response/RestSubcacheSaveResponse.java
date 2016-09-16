@@ -3,13 +3,13 @@ package com.maxent.dscache.api.rest.response;
 /**
  * Created by alain on 16/8/30.
  */
-public class RestSaveEntryResponse extends RestCommonResponse {
+public class RestSubcacheSaveResponse extends RestCommonResponse {
     private String message;
 
-    public RestSaveEntryResponse() {
+    public RestSubcacheSaveResponse() {
     }
 
-    public RestSaveEntryResponse(String message) {
+    public RestSubcacheSaveResponse(String message) {
         this.message = message;
     }
 

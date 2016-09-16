@@ -6,6 +6,7 @@ import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteCacheGroupResponse;
 import com.maxent.dscache.cache.*;
 import com.maxent.dscache.cache.client.response.CacheGroupDeleteResponse;
+import com.maxent.dscache.cache.client.response.CacheSaveResponse;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.cache.client.response.CreateCacheGroupResponse;
 import com.maxent.dscache.common.http.HttpClient;
@@ -35,6 +36,17 @@ public class CacheGroupClient {
         List<CacheMeta> cacheMetaList = cacheGroupMeta.getCacheMetas();
         CacheMeta cacheMeta = cacheMetaList.get(cacheIndex);
         return cacheClient.search(cacheMeta.getName(), entry);
+    }
+
+    public CacheSaveResponse save(String cacheGroupName, ICacheEntry entry) {
+        CacheGroupMeta cacheGroupMeta = cacheClusterViewer.getCacheGroupMeta(cacheGroupName);
+        String key = entry.key();
+        IPartitioner partitioner = new HashPartitioner(cacheGroupMeta.getCacheGroupCapacity());
+        int partition = partitioner.getPartition(key);
+        int cacheIndex = partition % cacheGroupMeta.getCurrentCachesNumber();
+        List<CacheMeta> cacheMetaList = cacheGroupMeta.getCacheMetas();
+        CacheMeta cacheMeta = cacheMetaList.get(cacheIndex);
+        return cacheClient.save(cacheMeta.getName(), entry);
     }
 
     public CreateCacheGroupResponse create(String cacheGroupName,

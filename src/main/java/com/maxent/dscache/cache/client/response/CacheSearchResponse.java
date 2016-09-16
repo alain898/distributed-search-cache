@@ -1,17 +1,16 @@
 package com.maxent.dscache.cache.client.response;
 
-import com.maxent.dscache.cache.ICacheEntry;
-
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by alain on 16/8/21.
  */
 public class CacheSearchResponse {
     private List<Double> scores;
-    private List<ICacheEntry> entries;
+    private List<Map> entries;
 
-    public CacheSearchResponse(List<Double> scores, List<ICacheEntry> entries) {
+    public CacheSearchResponse(List<Double> scores, List<Map> entries) {
         this.scores = scores;
         this.entries = entries;
     }
@@ -24,11 +23,11 @@ public class CacheSearchResponse {
         this.scores = scores;
     }
 
-    public List<ICacheEntry> getEntries() {
+    public List<Map> getEntries() {
         return entries;
     }
 
-    public void setEntries(List<ICacheEntry> entries) {
+    public void setEntries(List<Map> entries) {
         this.entries = entries;
     }
 }
