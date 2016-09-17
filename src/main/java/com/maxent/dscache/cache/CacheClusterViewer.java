@@ -165,6 +165,9 @@ public class CacheClusterViewer {
             cacheMeta.setPartitionsPerSubCache(cacheZnode.getPartitionsPerSubCache());
             cacheMeta.setBlocksPerPartition(cacheZnode.getBlocksPerPartition());
             cacheMeta.setBlockCapacity(cacheZnode.getBlockCapacity());
+            cacheMeta.setCacheGroup(cacheZnode.getCacheGroup());
+            cacheMeta.setForwardCache(cacheZnode.getForwardCache());
+            cacheMeta.setForwardThreshold(cacheZnode.getForwardThreshold());
             cacheMeta.setEntryClassName(cacheZnode.getEntryClassName());
             cacheMeta.setEntryClass(ClassUtils.loadClass(cacheZnode.getEntryClassName(), ICacheEntry.class));
             cacheMeta.setSubCacheMetas(subCaches);

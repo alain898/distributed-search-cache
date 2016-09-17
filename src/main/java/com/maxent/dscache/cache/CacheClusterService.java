@@ -129,6 +129,9 @@ public enum CacheClusterService implements IService {
         cacheZnode.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
         cacheZnode.setBlockCapacity(cacheMeta.getBlockCapacity());
         cacheZnode.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
+        cacheZnode.setCacheGroup(cacheMeta.getCacheGroup());
+        cacheZnode.setForwardCache(cacheMeta.getForwardCache());
+        cacheZnode.setForwardThreshold(cacheMeta.getForwardThreshold());
         zkClient.create().forPath(cacheZkPath);
         zkClient.setData().forPath(cacheZkPath, JsonUtils.toJson(cacheZnode).getBytes(Charsets.UTF_8));
 
@@ -171,8 +174,10 @@ public enum CacheClusterService implements IService {
 
     public CacheMeta createCache(String name, String entryClassName,
                                  int subCaches, int partitionsPerSubCache,
-                                 int blockCapacity, int blocksPerPartition)
-            throws Exception {
+                                 int blockCapacity, int blocksPerPartition,
+                                 String cacheGroup, String forwardCache,
+                                 long forwardThreshold,
+                                 boolean incClusterVersion) throws Exception {
         lockIfVersionMatched();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
@@ -191,6 +196,9 @@ public enum CacheClusterService implements IService {
             cacheMeta.setEntryClass(ClassUtils.loadClass(entryClassName, ICacheEntry.class));
             cacheMeta.setBlockCapacity(blockCapacity);
             cacheMeta.setBlocksPerPartition(blocksPerPartition);
+            cacheMeta.setCacheGroup(cacheGroup);
+            cacheMeta.setForwardCache(forwardCache);
+            cacheMeta.setForwardThreshold(forwardThreshold);
 
             List<SubCacheMeta> subCacheMetas = new ArrayList<>(subCaches);
             for (int i = 0; i < subCaches; i++) {
@@ -217,7 +225,9 @@ public enum CacheClusterService implements IService {
             doCreateCache(cacheMeta);
 
             // 增加版本号
-            increaseClusterVersion();
+            if (incClusterVersion) {
+                increaseClusterVersion();
+            }
 
             return cacheMeta;
 
@@ -228,6 +238,17 @@ public enum CacheClusterService implements IService {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
         }
+    }
+
+    public CacheMeta createCache(String name, String entryClassName,
+                                 int subCaches, int partitionsPerSubCache,
+                                 int blockCapacity, int blocksPerPartition,
+                                 boolean incClusterVersion)
+            throws Exception {
+        return createCache(name, entryClassName,
+                subCaches, partitionsPerSubCache,
+                blockCapacity, blocksPerPartition,
+                null, null, -1, incClusterVersion);
     }
 
     private void lockIfVersionMatched() throws Exception {
@@ -359,8 +380,15 @@ public enum CacheClusterService implements IService {
             List<CacheMeta> newCaches = new ArrayList<>();
             for (int i = 0; i < addedCaches; i++) {
                 String cacheName = String.format("%s_cache_%s", cacheGroupName, genIndexString(cachesNumber + i));
-                CacheMeta newCache = createCache(cacheName, entryClassName, subCachesPerCache,
-                        partitionsPerSubCache, blockCapacity, blocksPerPartition);
+                String forwardCache = String.format("%s_cache_%s", cacheGroupName, genIndexString(i % cachesNumber));
+                long forwardThreshold = 99; //TODO: add to request parameter
+                CacheMeta newCache = createCache(
+                        cacheName, entryClassName,
+                        subCachesPerCache, partitionsPerSubCache,
+                        blockCapacity, blocksPerPartition,
+                        cacheGroupName,
+                        forwardCache, forwardThreshold,
+                        false);
                 newCaches.add(newCache);
             }
 
@@ -400,8 +428,12 @@ public enum CacheClusterService implements IService {
             List<CacheMeta> cacheMetas = new ArrayList<>();
             for (int i = 0; i < cachesNumber; i++) {
                 String cacheName = String.format("%s_cache_%s", cacheGroupName, genIndexString(i));
-                CacheMeta cacheMeta = createCache(cacheName, entryClassName, subCachesPerCache,
-                        partitionsPerSubCache, blockCapacity, blocksPerPartition);
+                CacheMeta cacheMeta = createCache(
+                        cacheName, entryClassName,
+                        subCachesPerCache, partitionsPerSubCache,
+                        blockCapacity, blocksPerPartition,
+                        cacheGroupName, null, -1,
+                        false);
                 cacheMetas.add(cacheMeta);
             }
 

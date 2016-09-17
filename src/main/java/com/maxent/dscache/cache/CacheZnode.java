@@ -12,6 +12,10 @@ public class CacheZnode {
     private int blockCapacity;
     private int blocksPerPartition;
 
+    private String cacheGroup;
+    private String forwardCache;
+    private long forwardThreshold;
+
     public String getVersion() {
         return version;
     }
@@ -58,5 +62,29 @@ public class CacheZnode {
 
     public void setBlocksPerPartition(int blocksPerPartition) {
         this.blocksPerPartition = blocksPerPartition;
+    }
+
+    public String getCacheGroup() {
+        return cacheGroup;
+    }
+
+    public void setCacheGroup(String cacheGroup) {
+        this.cacheGroup = cacheGroup;
+    }
+
+    public String getForwardCache() {
+        return forwardCache;
+    }
+
+    public void setForwardCache(String forwardCache) {
+        this.forwardCache = forwardCache;
+    }
+
+    public long getForwardThreshold() {
+        return forwardThreshold;
+    }
+
+    public void setForwardThreshold(long forwardThreshold) {
+        this.forwardThreshold = forwardThreshold;
     }
 }
