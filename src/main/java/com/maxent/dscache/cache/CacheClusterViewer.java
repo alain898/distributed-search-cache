@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -86,6 +87,14 @@ public class CacheClusterViewer {
         zkClient.close();
     }
 
+    private List<String> sortPaths(List<String> paths) {
+        if (paths == null) {
+            return null;
+        }
+        Collections.sort(paths);
+        return paths;
+    }
+
     private CacheClusterMeta doGetCacheClusterMeta() throws Exception {
         CacheClusterMeta cacheClusterMeta = new CacheClusterMeta();
 
@@ -102,7 +111,7 @@ public class CacheClusterViewer {
          * restore hosts
          */
         List<Host> hosts = new ArrayList<>();
-        List<String> hostsPath = zkClient.getChildren().forPath(HOSTS_PATH);
+        List<String> hostsPath = sortPaths(zkClient.getChildren().forPath(HOSTS_PATH));
         for (String hostPath : hostsPath) {
             String fullHostPath = StringUtils.join(HOSTS_PATH, "/", hostPath);
             Host host = JsonUtils.fromJson(
@@ -117,7 +126,7 @@ public class CacheClusterViewer {
          * restore caches
          */
         List<CacheMeta> caches = new ArrayList<>();
-        List<String> cachesPath = zkClient.getChildren().forPath(CACHES_PATH);
+        List<String> cachesPath = sortPaths(zkClient.getChildren().forPath(CACHES_PATH));
         for (String cachePath : cachesPath) {
             String fullCachePath = StringUtils.join(CACHES_PATH, "/", cachePath);
             CacheZnode cacheZnode = JsonUtils.fromJson(
@@ -125,7 +134,7 @@ public class CacheClusterViewer {
                     CacheZnode.class);
 
             List<SubCacheMeta> subCaches = new ArrayList<>();
-            List<String> subCachesPath = zkClient.getChildren().forPath(fullCachePath);
+            List<String> subCachesPath = sortPaths(zkClient.getChildren().forPath(fullCachePath));
             for (String subCachePath : subCachesPath) {
                 String fullSubCachePath = StringUtils.join(fullCachePath, "/", subCachePath);
                 SubCacheZnode subCacheZnode = JsonUtils.fromJson(
@@ -134,7 +143,7 @@ public class CacheClusterViewer {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(subCacheZnode.getId());
                 List<ReplicationMeta> replications = new ArrayList<>();
-                List<String> replicationsPath = zkClient.getChildren().forPath(fullSubCachePath);
+                List<String> replicationsPath = sortPaths(zkClient.getChildren().forPath(fullSubCachePath));
                 for (String replicationPath : replicationsPath) {
                     String fullReplicationPath = StringUtils.join(fullSubCachePath, "/", replicationPath);
                     ReplicationZnode replicationZnode = JsonUtils.fromJson(
@@ -170,7 +179,7 @@ public class CacheClusterViewer {
          * restore cache groups
          */
         List<CacheGroupMeta> cacheGroupMetas = new ArrayList<>();
-        List<String> cacheGroups = zkClient.getChildren().forPath(CACHE_GROUPS_PATH);
+        List<String> cacheGroups = sortPaths(zkClient.getChildren().forPath(CACHE_GROUPS_PATH));
         for (String cacheGroupPath : cacheGroups) {
             String fullCacheGroupPath = StringUtils.join(CACHE_GROUPS_PATH, "/", cacheGroupPath);
             CacheGroupZnode cacheGroupZnode = JsonUtils.fromJson(
@@ -178,7 +187,7 @@ public class CacheClusterViewer {
                     CacheGroupZnode.class);
 
             List<CacheMeta> cachesInGroup = new ArrayList<>();
-            List<String> cacheNames = zkClient.getChildren().forPath(fullCacheGroupPath);
+            List<String> cacheNames = sortPaths(zkClient.getChildren().forPath(fullCacheGroupPath));
             for (String cacheName : cacheNames) {
                 cachesInGroup.add(getCache(cacheClusterMeta, cacheName));
             }

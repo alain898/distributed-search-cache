@@ -165,6 +165,10 @@ public enum CacheClusterService implements IService {
                 JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
     }
 
+    private String genIndexString(long index) {
+        return String.format("%016d", index);
+    }
+
     public CacheMeta createCache(String name, String entryClassName,
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition)
@@ -192,11 +196,11 @@ public enum CacheClusterService implements IService {
             for (int i = 0; i < subCaches; i++) {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(i);
-                subCacheMeta.setZkNodeName(String.format("subcache_%d", i));
+                subCacheMeta.setZkNodeName(String.format("subcache_%s", genIndexString(i)));
                 ReplicationMeta replicationMeta = new ReplicationMeta();
                 replicationMeta.setId(i);
                 replicationMeta.setHost(hosts.get(i % hosts.size()));
-                replicationMeta.setZkNodeName(String.format("replication_%d", 0));
+                replicationMeta.setZkNodeName(String.format("replication_%s", genIndexString(0)));
                 List<ReplicationMeta> replicationMetas = new ArrayList<>();
                 replicationMetas.add(replicationMeta);
                 subCacheMeta.setReplicationMetas(replicationMetas);
@@ -261,7 +265,7 @@ public enum CacheClusterService implements IService {
 
     private void doAddHost(Host host) throws Exception {
         String hostPath = StringUtils.join(
-                HOSTS_PATH, "/", String.format("%s%d", HOST_PATH_PREFIX, host.getId()));
+                HOSTS_PATH, "/", String.format("%s_%s", HOST_PATH_PREFIX, genIndexString(host.getId())));
         zkClient.create().forPath(hostPath);
         zkClient.setData().forPath(hostPath, JsonUtils.toJson(host).getBytes(Charsets.UTF_8));
     }
@@ -354,7 +358,7 @@ public enum CacheClusterService implements IService {
             int cachesNumber = cacheGroupMeta.getCurrentCachesNumber();
             List<CacheMeta> newCaches = new ArrayList<>();
             for (int i = 0; i < addedCaches; i++) {
-                String cacheName = String.format("%s_cache_%d", cacheGroupName, cachesNumber + i);
+                String cacheName = String.format("%s_cache_%s", cacheGroupName, genIndexString(cachesNumber + i));
                 CacheMeta newCache = createCache(cacheName, entryClassName, subCachesPerCache,
                         partitionsPerSubCache, blockCapacity, blocksPerPartition);
                 newCaches.add(newCache);
@@ -395,7 +399,7 @@ public enum CacheClusterService implements IService {
 
             List<CacheMeta> cacheMetas = new ArrayList<>();
             for (int i = 0; i < cachesNumber; i++) {
-                String cacheName = String.format("%s_cache_%d", cacheGroupName, i);
+                String cacheName = String.format("%s_cache_%s", cacheGroupName, genIndexString(i));
                 CacheMeta cacheMeta = createCache(cacheName, entryClassName, subCachesPerCache,
                         partitionsPerSubCache, blockCapacity, blocksPerPartition);
                 cacheMetas.add(cacheMeta);
