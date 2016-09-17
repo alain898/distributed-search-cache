@@ -1,6 +1,9 @@
 package com.maxent.dscache.cache.client;
 
-import com.maxent.dscache.api.rest.request.*;
+import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
+import com.maxent.dscache.api.rest.request.RestDeleteCacheRequest;
+import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
+import com.maxent.dscache.api.rest.request.RestSubcacheSaveRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteCacheResponse;
 import com.maxent.dscache.api.rest.response.RestSubCacheSearchResponse;
@@ -115,7 +118,8 @@ public class CacheClient {
     }
 
     public static void main(String[] args) {
-        CacheClusterViewer cacheClusterViewer = new CacheClusterViewer();
+        CacheClusterViewerFactory.configure();
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheClient cacheClient = new CacheClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
         testCacheEntry.setField1("field1");

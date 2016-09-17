@@ -34,7 +34,7 @@ public enum SubCacheService implements IService {
             String ip = "127.0.0.1";
             this.host = new Host(ip, DEFAULT_REST_SERVER_PORT);
 
-            cacheClusterViewer = new CacheClusterViewer();
+            cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
             restoreCaches();
         } catch (Exception e) {
             throw new RuntimeException(e);

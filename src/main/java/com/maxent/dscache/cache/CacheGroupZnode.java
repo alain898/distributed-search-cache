@@ -1,7 +1,5 @@
 package com.maxent.dscache.cache;
 
-import java.util.List;
-
 /**
  * Created by alain on 16/9/6.
  */

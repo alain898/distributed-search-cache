@@ -90,7 +90,7 @@ public class SubCache<E extends ICacheEntry> {
 
         this.persistFile = String.format("%s_%s", cacheName, subCacheId);
         this.flusher = PersistUtils.createFlusher(persistFile, DEFAULT_PERSIST_DIR, persistFile);
-        this.cacheClusterViewer = new CacheClusterViewer();
+        this.cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         this.cacheClient = new CacheClient(this.cacheClusterViewer);
         this.flushThread = new Thread(new PersistWorker());
 
