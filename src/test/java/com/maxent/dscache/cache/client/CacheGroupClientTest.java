@@ -1,10 +1,12 @@
 package com.maxent.dscache.cache.client;
 
 import com.maxent.dscache.cache.CacheClusterViewer;
+import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
 import com.maxent.dscache.cache.client.response.CacheSaveResponse;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.tools.JsonUtils;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -13,9 +15,14 @@ import static org.junit.Assert.*;
  * Created by alain on 16/9/16.
  */
 public class CacheGroupClientTest {
+    @Before
+    public void setUp() throws Exception {
+        CacheClusterViewerFactory.configure();
+    }
+
     @Test
     public void search() throws Exception {
-        CacheClusterViewer cacheClusterViewer = new CacheClusterViewer();
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
         testCacheEntry.setField1("field1");
@@ -26,7 +33,7 @@ public class CacheGroupClientTest {
 
     @Test
     public void save() throws Exception {
-        CacheClusterViewer cacheClusterViewer = new CacheClusterViewer();
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
         testCacheEntry.setField1("field1");

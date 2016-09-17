@@ -58,7 +58,7 @@ public enum CacheClusterService implements IService {
 
             clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
 
-            cacheClusterViewer = new CacheClusterViewer();
+            cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -1,6 +1,7 @@
 package com.maxent.dscache.cache.client;
 
 import com.maxent.dscache.cache.CacheClusterViewer;
+import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.tools.JsonUtils;
@@ -12,7 +13,8 @@ import org.junit.Test;
 public class CacheClientTest {
     @Test
     public void search() throws Exception {
-        CacheClusterViewer cacheClusterViewer = new CacheClusterViewer();
+        CacheClusterViewerFactory.configure();
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheClient cacheClient = new CacheClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
         testCacheEntry.setField1("field1");
