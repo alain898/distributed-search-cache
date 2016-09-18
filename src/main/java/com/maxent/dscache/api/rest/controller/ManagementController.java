@@ -122,19 +122,19 @@ public class ManagementController {
     @Path("/cache_group/update")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public RestAlterCacheGroupResponse updateCacheGroup(@Context final HttpServletResponse httpServletResponse,
-                                                        final RestAlterCacheGroupRequest request) {
+    public RestUpdateCacheGroupResponse updateCacheGroup(@Context final HttpServletResponse httpServletResponse,
+                                                         final RestUpdateCacheGroupRequest request) {
 
         try {
             cacheClusterService.updateCacheGroup(
                     request.getCacheGroupName(),
                     request.getAddedCaches());
-            RestAlterCacheGroupResponse response = new RestAlterCacheGroupResponse();
+            RestUpdateCacheGroupResponse response = new RestUpdateCacheGroupResponse();
             response.setMessage("success");
             return response;
         } catch (Exception e) {
-            logger.error("createCache failed", e);
-            return RestHelper.createErrorResponse(RestAlterCacheGroupResponse.class, "add cache failed");
+            logger.error("updateCache failed", e);
+            return RestHelper.createErrorResponse(RestUpdateCacheGroupResponse.class, "add cache failed");
         }
     }
 

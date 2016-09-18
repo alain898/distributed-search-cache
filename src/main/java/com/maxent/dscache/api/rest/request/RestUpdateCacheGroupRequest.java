@@ -3,7 +3,7 @@ package com.maxent.dscache.api.rest.request;
 /**
  * Created by alain on 16/9/8.
  */
-public class RestAlterCacheGroupRequest {
+public class RestUpdateCacheGroupRequest {
     private String cacheGroupName;
     private int addedCaches;
 

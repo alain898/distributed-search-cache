@@ -1,14 +1,13 @@
 package com.maxent.dscache.cache.client;
 
+import com.maxent.dscache.api.rest.request.RestUpdateCacheGroupRequest;
 import com.maxent.dscache.api.rest.request.RestCreateCacheGroupRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteCacheGroupRequest;
+import com.maxent.dscache.api.rest.response.RestUpdateCacheGroupResponse;
 import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteCacheGroupResponse;
 import com.maxent.dscache.cache.*;
-import com.maxent.dscache.cache.client.response.CacheGroupDeleteResponse;
-import com.maxent.dscache.cache.client.response.CacheSaveResponse;
-import com.maxent.dscache.cache.client.response.CacheSearchResponse;
-import com.maxent.dscache.cache.client.response.CreateCacheGroupResponse;
+import com.maxent.dscache.cache.client.response.*;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.partitioner.IPartitioner;
@@ -73,6 +72,22 @@ public class CacheGroupClient {
         RestCreateCacheGroupResponse response =
                 httpClient.post(url, path, request, RestCreateCacheGroupResponse.class);
         return new CreateCacheGroupResponse(response.getMessage());
+    }
+
+    public CacheGroupUpdateResponse update(String cacheGroupName,
+                                           int addedCaches) {
+        Host host = cacheClusterViewer.getHosts().get(0);
+
+        String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+        String path = "/management/cache_group/update";
+        HttpClient httpClient = new HttpClient();
+        RestUpdateCacheGroupRequest request = new RestUpdateCacheGroupRequest();
+        request.setCacheGroupName(cacheGroupName);
+        request.setAddedCaches(addedCaches);
+
+        RestUpdateCacheGroupResponse response =
+                httpClient.post(url, path, request, RestUpdateCacheGroupResponse.class);
+        return new CacheGroupUpdateResponse(response.getMessage());
     }
 
     public CacheGroupDeleteResponse delete(String cacheGroupName) throws Exception {
