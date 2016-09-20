@@ -1,6 +1,7 @@
 package com.maxent.dscache.cache;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteSubCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
@@ -9,6 +10,7 @@ import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -19,8 +21,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by alain on 16/8/20.
@@ -172,6 +173,45 @@ public enum CacheClusterService implements IService {
         return String.format("%016d", index);
     }
 
+    private Map<Integer, Integer> countHostsUsageOfCacheGroup(CacheGroupMeta cacheGroupMeta, List<Host> hosts) {
+        Preconditions.checkArgument(CollectionUtils.isNotEmpty(hosts), "hosts is empty");
+
+        final Map<Integer, Integer> hostsCount = new HashMap<>();
+        hosts.forEach(host -> hostsCount.put(host.getId(), 0));
+
+        if (cacheGroupMeta == null || cacheGroupMeta.getCacheMetas() == null) {
+            return hostsCount;
+        }
+
+        for (CacheMeta cacheMeta : cacheGroupMeta.getCacheMetas()) {
+            for (SubCacheMeta subCacheMeta : cacheMeta.getSubCacheMetas()) {
+                countHosts(hostsCount, subCacheMeta.getReplicationMetas().get(0).getId());
+            }
+        }
+        return hostsCount;
+    }
+
+    private void countHosts(Map<Integer, Integer> hostsCount, int hostId) {
+        if (hostsCount.containsKey(hostId)) {
+            hostsCount.put(hostId, hostsCount.get(hostId) + 1);
+        } else {
+            hostsCount.put(hostId, 1);
+        }
+    }
+
+    private int chooseThenCountHost(Map<Integer, Integer> hostsCount) {
+        int min = Integer.MAX_VALUE;
+        int keyWithMinValue = -1;
+        for (Map.Entry<Integer, Integer> entry : hostsCount.entrySet()) {
+            if (entry.getValue() < min) {
+                min = entry.getValue();
+                keyWithMinValue = entry.getKey();
+            }
+        }
+        countHosts(hostsCount, keyWithMinValue);
+        return keyWithMinValue;
+    }
+
     public CacheMeta createCache(String name, String entryClassName,
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition,
@@ -200,14 +240,17 @@ public enum CacheClusterService implements IService {
             cacheMeta.setForwardCache(forwardCache);
             cacheMeta.setForwardThreshold(forwardThreshold);
 
+            Map<Integer, Integer> hostsCount = countHostsUsageOfCacheGroup(
+                    cacheClusterViewer.getCacheGroupMeta(cacheMeta.getCacheGroup()),
+                    cacheClusterViewer.getHosts());
             List<SubCacheMeta> subCacheMetas = new ArrayList<>(subCaches);
             for (int i = 0; i < subCaches; i++) {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(i);
                 subCacheMeta.setZkNodeName(String.format("subcache_%s", genIndexString(i)));
                 ReplicationMeta replicationMeta = new ReplicationMeta();
-                replicationMeta.setId(i);
-                replicationMeta.setHost(hosts.get(i % hosts.size()));
+                replicationMeta.setId(0);
+                replicationMeta.setHost(hosts.get(chooseThenCountHost(hostsCount)));
                 replicationMeta.setZkNodeName(String.format("replication_%s", genIndexString(0)));
                 List<ReplicationMeta> replicationMetas = new ArrayList<>();
                 replicationMetas.add(replicationMeta);
