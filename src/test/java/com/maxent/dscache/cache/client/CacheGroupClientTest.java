@@ -3,6 +3,7 @@ package com.maxent.dscache.cache.client;
 import com.maxent.dscache.cache.CacheClusterViewer;
 import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
+import com.maxent.dscache.cache.client.response.CacheGroupUpdateResponse;
 import com.maxent.dscache.cache.client.response.CacheSaveResponse;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.tools.JsonUtils;
@@ -39,6 +40,14 @@ public class CacheGroupClientTest {
         testCacheEntry.setField1("field1");
         testCacheEntry.setField2("field2");
         CacheSaveResponse response = cacheGroupClient.save("cache_group_test1", testCacheEntry);
+        System.out.println(JsonUtils.toJson(response));
+    }
+
+    @Test
+    public void update() throws Exception {
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
+        CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
+        CacheGroupUpdateResponse response = cacheGroupClient.update("cache_group_test1", 4);
         System.out.println(JsonUtils.toJson(response));
     }
 

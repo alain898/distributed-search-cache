@@ -2,6 +2,7 @@ package com.maxent.dscache;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.maxent.dscache.api.rest.RestResource;
+import com.maxent.dscache.cache.CacheClusterInitializer;
 import com.maxent.dscache.cache.CacheClusterService;
 import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.SubCacheService;
@@ -59,6 +60,7 @@ public class Main implements Daemon {
             ServletContextHandler context = new ServletContextHandler(server, "/*");
             context.addServlet(servlet, "/*");
 
+            CacheClusterInitializer.INSTANCE.initClusterIfNot();
             CacheClusterViewerFactory.configure();
             CacheClusterService.INSTANCE.start();
             SubCacheService.INSTANCE.start();

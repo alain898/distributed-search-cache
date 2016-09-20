@@ -6,7 +6,10 @@ import com.maxent.dscache.api.rest.request.RestCreateSubCacheRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteSubCacheRequest;
 import com.maxent.dscache.api.rest.response.RestCreateSubCacheResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteSubCacheResponse;
-import com.maxent.dscache.cache.exceptions.*;
+import com.maxent.dscache.cache.exceptions.CacheCreateFailureException;
+import com.maxent.dscache.cache.exceptions.CacheExistException;
+import com.maxent.dscache.cache.exceptions.CacheGroupCreateFailureException;
+import com.maxent.dscache.cache.exceptions.CacheHostExistException;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
@@ -17,11 +20,13 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by alain on 16/8/20.
@@ -43,8 +48,6 @@ public enum CacheClusterService implements IService {
     private final String CACHE_GROUPS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/cache_groups");
     private final String HOST_PATH_PREFIX = "host_";
 
-    private final String CACHE_CLUSTER_INITIAL_VERSION = "0";
-
     InterProcessReadWriteLock clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
 
     private final CacheClusterViewer cacheClusterViewer;
@@ -54,8 +57,6 @@ public enum CacheClusterService implements IService {
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
             zkClient.start();
-
-            initClusterIfNot();
 
             clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
 
@@ -361,40 +362,6 @@ public enum CacheClusterService implements IService {
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
             }
-        }
-    }
-
-    private void initClusterIfNot() throws CacheCheckFailureException, CacheInitializeFailureException {
-        try {
-            try {
-                zkClient.create().forPath(CACHE_CLUSTER_PATH);
-                CacheClusterZnode cacheClusterZnode = new CacheClusterZnode();
-                cacheClusterZnode.setVersion(CACHE_CLUSTER_INITIAL_VERSION);
-                zkClient.setData().forPath(CACHE_CLUSTER_PATH,
-                        JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
-            } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", CACHE_CLUSTER_PATH));
-            }
-
-            try {
-                zkClient.create().forPath(CACHES_PATH);
-            } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", CACHES_PATH));
-            }
-
-            try {
-                zkClient.create().forPath(HOSTS_PATH);
-            } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", HOSTS_PATH));
-            }
-
-            try {
-                zkClient.create().forPath(CACHE_GROUPS_PATH);
-            } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", CACHE_GROUPS_PATH));
-            }
-        } catch (Exception e) {
-            throw new CacheInitializeFailureException("failed to check cluster", e);
         }
     }
 
