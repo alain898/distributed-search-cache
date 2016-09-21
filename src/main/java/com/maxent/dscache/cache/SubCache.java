@@ -308,6 +308,28 @@ public class SubCache<E extends ICacheEntry> {
         partitions.clear();
         shutdown = true;
         flushThread.interrupt();
+        try {
+            flushThread.join();
+        } catch (InterruptedException e) {
+            logger.warn("unexpected InterruptedException");
+        }
+
+        String persistDirPath = new File(persistDir).getPath();
+        try {
+            Files.
+                    list(Paths.get(persistDirPath)).
+                    filter(path -> path.getFileName().toString().startsWith(persistFile)).
+                    forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (IOException e) {
+                            logger.error(String.format("failed to delete path[%s]", path), e);
+                        }
+                    });
+        } catch (IOException e) {
+            logger.error(String.format(
+                    "failed to clear persist files for pattern[%s]", persistDir), e);
+        }
     }
 
     public void warmUp() {
