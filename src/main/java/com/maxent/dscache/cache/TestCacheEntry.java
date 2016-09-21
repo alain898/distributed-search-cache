@@ -1,5 +1,7 @@
 package com.maxent.dscache.cache;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * Created by alain on 16/8/20.
  */
@@ -25,12 +27,24 @@ public class TestCacheEntry implements ICacheEntry {
 
     @Override
     public String key() {
-        return "";
+        return StringUtils.join(field1, field2);
     }
 
     @Override
     public double match(ICacheEntry entry) {
-        return 1;
+        if (!(entry instanceof TestCacheEntry)) {
+            return 0;
+        }
+        TestCacheEntry cEntry = (TestCacheEntry) entry;
+        if (StringUtils.equals(field1, cEntry.field1) && StringUtils.equals(field2, cEntry.field2)) {
+            return 1;
+        } else if (StringUtils.equals(field1, cEntry.field1)) {
+            return 0.8;
+        } else if (StringUtils.equals(field2, cEntry.field2)) {
+            return 0.5;
+        } else {
+            return 0;
+        }
     }
 
     @Override

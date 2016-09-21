@@ -241,11 +241,17 @@ public enum CacheClusterService implements IService {
             cacheMeta.setForwardCache(forwardCache);
             cacheMeta.setForwardThreshold(forwardThreshold);
 
+            CacheGroupMeta cacheGroupMeta = cacheClusterViewer.getCacheGroupMeta(cacheMeta.getCacheGroup());
+            int subCacheIndexBase = 0;
+            if (cacheGroupMeta != null) {
+                subCacheIndexBase = cacheGroupMeta.getCurrentCachesNumber();
+            }
+
             Map<Integer, Integer> hostsCount = countHostsUsageOfCacheGroup(
                     cacheClusterViewer.getCacheGroupMeta(cacheMeta.getCacheGroup()),
                     cacheClusterViewer.getHosts());
             List<SubCacheMeta> subCacheMetas = new ArrayList<>(subCaches);
-            for (int i = 0; i < subCaches; i++) {
+            for (int i = subCacheIndexBase; i < subCacheIndexBase + subCaches; i++) {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(i);
                 subCacheMeta.setZkNodeName(String.format("subcache_%s", genIndexString(i)));
@@ -375,6 +381,7 @@ public enum CacheClusterService implements IService {
             for (CacheGroupMeta cacheGroup : cacheGroups) {
                 if (cacheGroup.getCacheGroupName().equals(cacheGroupName)) {
                     cacheGroupMeta = cacheGroup;
+                    break;
                 }
             }
             if (cacheGroupMeta == null) {
@@ -521,8 +528,8 @@ public enum CacheClusterService implements IService {
             CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
             cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
             cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
-            cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
-            cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getLastCachesNumber());
+            cacheGroupZnode.setCurrentCachesNumber(allCacheMetas.size());
+            cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
             cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
             cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
             cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
@@ -534,7 +541,7 @@ public enum CacheClusterService implements IService {
             zkClient.setData().forPath(cacheGroupZkPath,
                     JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
 
-            for (CacheMeta cacheMeta : allCacheMetas) {
+            for (CacheMeta cacheMeta : newCacheMetas) {
                 String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
                 zkClient.create().forPath(cacheZkPath);
             }
@@ -560,6 +567,7 @@ public enum CacheClusterService implements IService {
             for (CacheGroupMeta cacheGroup : cacheGroups) {
                 if (cacheGroup.getCacheGroupName().equals(cacheGroupName)) {
                     cacheGroupMeta = cacheGroup;
+                    break;
                 }
             }
 
@@ -567,7 +575,13 @@ public enum CacheClusterService implements IService {
                 return;
             }
 
-            doDeleteCacheGroup(cacheGroupMeta);
+            List<CacheMeta> cacheMetas = cacheGroupMeta.getCacheMetas();
+            for (CacheMeta cache : cacheMetas) {
+                deleteCache(cache.getName());
+            }
+
+            String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", cacheGroupName);
+            zkClient.delete().deletingChildrenIfNeeded().forPath(cacheGroupZkPath);
 
         } finally {
             try {
@@ -578,12 +592,6 @@ public enum CacheClusterService implements IService {
         }
     }
 
-    private void doDeleteCacheGroup(CacheGroupMeta cacheGroupMeta) throws Exception {
-        List<CacheMeta> cacheMetas = cacheGroupMeta.getCacheMetas();
-        for (CacheMeta cache : cacheMetas) {
-            deleteCache(cache.getName());
-        }
-    }
 
     public void deleteCache(String cacheName) throws Exception {
         lockIfVersionMatched();
@@ -595,6 +603,7 @@ public enum CacheClusterService implements IService {
             for (CacheMeta cache : caches) {
                 if (cache.getName().equals(cacheName)) {
                     cacheMeta = cache;
+                    break;
                 }
             }
 
@@ -616,7 +625,7 @@ public enum CacheClusterService implements IService {
 
             String name = cacheMeta.getName();
             String cacheZkPath = StringUtils.join(CACHES_PATH, "/", name);
-            zkClient.delete().forPath(cacheZkPath);
+            zkClient.delete().deletingChildrenIfNeeded().forPath(cacheZkPath);
 
         } finally {
             try {

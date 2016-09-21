@@ -3,6 +3,7 @@ package com.maxent.dscache.cache.client;
 import com.maxent.dscache.cache.CacheClusterViewer;
 import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
+import com.maxent.dscache.cache.client.response.CacheGroupDeleteResponse;
 import com.maxent.dscache.cache.client.response.CacheGroupUpdateResponse;
 import com.maxent.dscache.cache.client.response.CacheSaveResponse;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
@@ -58,7 +59,10 @@ public class CacheGroupClientTest {
 
     @Test
     public void delete() throws Exception {
-
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
+        CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
+        CacheGroupDeleteResponse response = cacheGroupClient.delete("cache_group_test1");
+        System.out.println(JsonUtils.toJson(response));
     }
 
 }
