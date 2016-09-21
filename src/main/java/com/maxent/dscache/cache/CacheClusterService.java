@@ -241,17 +241,11 @@ public enum CacheClusterService implements IService {
             cacheMeta.setForwardCache(forwardCache);
             cacheMeta.setForwardThreshold(forwardThreshold);
 
-            CacheGroupMeta cacheGroupMeta = cacheClusterViewer.getCacheGroupMeta(cacheMeta.getCacheGroup());
-            int subCacheIndexBase = 0;
-            if (cacheGroupMeta != null) {
-                subCacheIndexBase = cacheGroupMeta.getCurrentCachesNumber();
-            }
-
             Map<Integer, Integer> hostsCount = countHostsUsageOfCacheGroup(
                     cacheClusterViewer.getCacheGroupMeta(cacheMeta.getCacheGroup()),
                     cacheClusterViewer.getHosts());
             List<SubCacheMeta> subCacheMetas = new ArrayList<>(subCaches);
-            for (int i = subCacheIndexBase; i < subCacheIndexBase + subCaches; i++) {
+            for (int i = 0; i < subCaches; i++) {
                 SubCacheMeta subCacheMeta = new SubCacheMeta();
                 subCacheMeta.setId(i);
                 subCacheMeta.setZkNodeName(String.format("subcache_%s", genIndexString(i)));

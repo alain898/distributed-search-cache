@@ -61,6 +61,7 @@ public class Main implements Daemon {
             context.addServlet(servlet, "/*");
 
             CacheClusterInitializer.INSTANCE.initClusterIfNot();
+
             CacheClusterViewerFactory.configure();
             CacheClusterService.INSTANCE.start();
             SubCacheService.INSTANCE.start();
