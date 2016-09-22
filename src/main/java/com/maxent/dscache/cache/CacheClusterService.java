@@ -571,12 +571,14 @@ public enum CacheClusterService implements IService {
 
             List<CacheMeta> cacheMetas = cacheGroupMeta.getCacheMetas();
             for (CacheMeta cache : cacheMetas) {
-                deleteCache(cache.getName());
+                deleteCache(cache.getName(), false);
             }
 
             String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", cacheGroupName);
             zkClient.delete().deletingChildrenIfNeeded().forPath(cacheGroupZkPath);
 
+            // 增加版本号
+            increaseClusterVersion();
         } finally {
             try {
                 unlockIfVersionMatched();
@@ -586,8 +588,12 @@ public enum CacheClusterService implements IService {
         }
     }
 
-
     public void deleteCache(String cacheName) throws Exception {
+        deleteCache(cacheName, true);
+    }
+
+    public void deleteCache(String cacheName,
+                            boolean incClusterVersion) throws Exception {
         lockIfVersionMatched();
         HttpClient httpClient = new HttpClient();
         try {
@@ -620,6 +626,11 @@ public enum CacheClusterService implements IService {
             String name = cacheMeta.getName();
             String cacheZkPath = StringUtils.join(CACHES_PATH, "/", name);
             zkClient.delete().deletingChildrenIfNeeded().forPath(cacheZkPath);
+
+            // 增加版本号
+            if (incClusterVersion) {
+                increaseClusterVersion();
+            }
 
         } finally {
             try {
