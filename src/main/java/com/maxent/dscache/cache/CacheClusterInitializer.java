@@ -4,6 +4,8 @@ import com.google.common.base.Charsets;
 import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
 import com.maxent.dscache.cache.exceptions.CacheInitializeFailureException;
 import com.maxent.dscache.common.tools.JsonUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -15,17 +17,20 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by alain on 16/9/20.
  */
-public enum CacheClusterInitializer {
-    INSTANCE;
+public class CacheClusterInitializer {
+    private static final Logger logger = LoggerFactory.getLogger(CacheClusterInitializer.class);
 
-    private final Logger logger = LoggerFactory.getLogger(CacheClusterInitializer.class);
-
-    private String zookeeperConnectionUrl = "127.0.0.1:2181";
+    private final String zookeeperConnectionUrl;
 
     private CuratorFramework zkClient;
 
-    CacheClusterInitializer() throws RuntimeException {
+    public CacheClusterInitializer() throws RuntimeException {
+        this(ConfigFactory.load());
+    }
+
+    public CacheClusterInitializer(Config config) throws RuntimeException {
         try {
+            this.zookeeperConnectionUrl = config.getString("zookeeper.connection_url");
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
         } catch (Exception e) {

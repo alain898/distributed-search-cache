@@ -13,6 +13,8 @@ import com.maxent.dscache.cache.exceptions.CacheHostExistException;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
@@ -31,14 +33,12 @@ import java.util.Map;
 /**
  * Created by alain on 16/8/20.
  */
-public enum CacheClusterService implements IService {
-    INSTANCE;
-
-    private final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
+public class CacheClusterService {
+    private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
 
     private static final long DEFAULT_START_VERSION = 0;
 
-    private String zookeeperConnectionUrl = "127.0.0.1:2181";
+    private final String zookeeperConnectionUrl;
 
     private CuratorFramework zkClient;
 
@@ -47,8 +47,30 @@ public enum CacheClusterService implements IService {
 
     private final CacheClusterViewer cacheClusterViewer;
 
-    CacheClusterService() throws RuntimeException {
+    private static volatile CacheClusterService cacheClusterService = null;
+
+    public static void configure(Config config) {
+        synchronized (CacheClusterService.class) {
+            cacheClusterService = new CacheClusterService(config);
+        }
+    }
+
+    public static CacheClusterService getInstance() {
+        if (cacheClusterService == null) {
+            throw new RuntimeException(
+                    "CacheClusterService not configured, please configure before using it.");
+        }
+        return cacheClusterService;
+    }
+
+    private CacheClusterService(Config config) throws RuntimeException {
         try {
+            if (config == null) {
+                config = ConfigFactory.load();
+            }
+
+            this.zookeeperConnectionUrl = config.getString("zookeeper.connection_url");
+
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
             zkClient.start();
@@ -643,16 +665,6 @@ public enum CacheClusterService implements IService {
                         Constants.CACHE_CLUSTER_PATH), e);
             }
         }
-    }
-
-    @Override
-    public void start() {
-
-    }
-
-    @Override
-    public void stop() {
-
     }
 }
 

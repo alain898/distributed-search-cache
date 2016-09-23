@@ -15,6 +15,7 @@ import com.maxent.dscache.cache.client.response.CacheSaveResponse;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.tools.JsonUtils;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * Created by alain on 16/8/20.
@@ -118,7 +119,7 @@ public class CacheClient {
     }
 
     public static void main(String[] args) {
-        CacheClusterViewerFactory.configure();
+        CacheClusterViewerFactory.configure(ConfigFactory.load());
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheClient cacheClient = new CacheClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();

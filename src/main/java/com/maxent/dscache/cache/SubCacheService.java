@@ -3,6 +3,8 @@ package com.maxent.dscache.cache;
 import com.google.common.base.Preconditions;
 import com.maxent.dscache.cache.exceptions.*;
 import com.maxent.dscache.common.tools.JsonUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -15,12 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by alain on 16/8/20.
  */
-public enum SubCacheService implements IService {
-    INSTANCE;
-
-    private final Logger logger = LoggerFactory.getLogger(SubCacheService.class);
-
-    private static final int DEFAULT_REST_SERVER_PORT = 5232;
+public class SubCacheService {
+    private static final Logger logger = LoggerFactory.getLogger(SubCacheService.class);
 
     private final Object lock = new Object();
     private Map<String, Map<String, SubCache<ICacheEntry>>> caches = new ConcurrentHashMap<>();
@@ -28,11 +26,31 @@ public enum SubCacheService implements IService {
 
     private final Host host;
 
-    SubCacheService() {
+    private static volatile SubCacheService subCacheService = null;
+
+    public static void configure(Config config) {
+        synchronized (SubCacheService.class) {
+            subCacheService = new SubCacheService(config);
+        }
+    }
+
+    public static SubCacheService getInstance() {
+        if (subCacheService == null) {
+            throw new RuntimeException(
+                    "SubCacheService not configured, please configure before using it.");
+        }
+        return subCacheService;
+    }
+
+    public SubCacheService(Config config) {
         try {
-            //String ip = InetAddress.getLocalHost().getHostAddress();
-            String ip = "127.0.0.1";
-            this.host = new Host(ip, DEFAULT_REST_SERVER_PORT);
+            if (config == null) {
+                config = ConfigFactory.load();
+            }
+
+            String ip = config.getString("server.ip");
+            int port = config.getInt("server.port");
+            this.host = new Host(ip, port);
 
             cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
             restoreCaches();
@@ -215,15 +233,5 @@ public enum SubCacheService implements IService {
         ICacheEntry queryEntry = JsonUtils.fromMap(query, cacheEntryClass);
 
         return subCache.search(queryEntry, SearchPolicy.valueOf(searchPolicy), SearchMode.valueOf(searchMode));
-    }
-
-    @Override
-    public void start() {
-
-    }
-
-    @Override
-    public void stop() {
-
     }
 }

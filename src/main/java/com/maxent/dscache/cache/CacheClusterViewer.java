@@ -4,6 +4,8 @@ import com.google.common.base.Charsets;
 import com.maxent.dscache.common.partitioner.HashPartitioner;
 import com.maxent.dscache.common.tools.ClassUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -25,7 +27,7 @@ import java.util.List;
 public class CacheClusterViewer {
     private static final Logger logger = LoggerFactory.getLogger(CacheClusterService.class);
 
-    private String zookeeperConnectionUrl = "127.0.0.1:2181";
+    private final String zookeeperConnectionUrl;
 
     private CuratorFramework zkClient;
 
@@ -38,7 +40,17 @@ public class CacheClusterViewer {
     private volatile boolean closed = false;
 
     public CacheClusterViewer() throws RuntimeException {
+        this(ConfigFactory.load());
+    }
+
+    public CacheClusterViewer(Config config) throws RuntimeException {
         try {
+            if (config == null) {
+                config = ConfigFactory.load();
+            }
+
+            this.zookeeperConnectionUrl = config.getString("zookeeper.connection_url");
+
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
             zkClient.start();

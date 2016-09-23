@@ -1,5 +1,7 @@
 package com.maxent.dscache.cache;
 
+import com.typesafe.config.Config;
+
 /**
  * Created by alain on 16/9/17.
  */
@@ -13,12 +15,12 @@ public class CacheClusterViewerFactory {
      * on cache cluster servers, this function should be called before starting cache services to
      * make sure the deadlock dose not happen.
      * <p>
-     * on cache cluster clients, it's recommend this method called only once before getCacheClusterViewer
-     * called, then all calls of getCacheClusterViewer will return the same CacheClusterViewer instance.
+     * on cache cluster clients, it's recommend this method called only once before getInstance
+     * called, then all calls of getInstance will return the same CacheClusterViewer instance.
      */
-    public static void configure() {
+    public static void configure(Config config) {
         synchronized (CacheClusterViewerFactory.class) {
-            cacheClusterViewer = new CacheClusterViewer();
+            cacheClusterViewer = new CacheClusterViewer(config);
         }
     }
 

@@ -28,7 +28,7 @@ public class ManagementController {
 
     private static final Logger logger = LoggerFactory.getLogger(ManagementController.class);
 
-    CacheClusterService cacheClusterService = CacheClusterService.INSTANCE;
+    CacheClusterService cacheClusterService = CacheClusterService.getInstance();
 
     @POST
     @Path("/hosts")

@@ -8,6 +8,7 @@ import com.maxent.dscache.cache.client.response.CacheGroupUpdateResponse;
 import com.maxent.dscache.cache.client.response.CacheSaveResponse;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.tools.JsonUtils;
+import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -19,7 +20,7 @@ import static org.junit.Assert.*;
 public class CacheGroupClientTest {
     @Before
     public void setUp() throws Exception {
-        CacheClusterViewerFactory.configure();
+        CacheClusterViewerFactory.configure(ConfigFactory.load());
     }
 
     @Test

@@ -38,7 +38,7 @@ import java.util.Map;
 public class SubCacheController {
     private static final Logger logger = LoggerFactory.getLogger(SubCacheController.class);
 
-    private SubCacheService subCacheService = SubCacheService.INSTANCE;
+    private SubCacheService subCacheService = SubCacheService.getInstance();
 
     @POST
     @Path("/create")
