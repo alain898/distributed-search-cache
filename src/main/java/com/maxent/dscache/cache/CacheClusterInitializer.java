@@ -25,13 +25,6 @@ public enum CacheClusterInitializer {
 
     private CuratorFramework zkClient;
 
-    private final String CACHE_CLUSTER_PATH = "/cache_cluster";
-    private final String CACHES_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/caches");
-    private final String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
-    private final String CACHE_GROUPS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/cache_groups");
-
-    private final String CACHE_CLUSTER_INITIAL_VERSION = "0";
-
     CacheClusterInitializer() throws RuntimeException {
         try {
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
@@ -46,31 +39,31 @@ public enum CacheClusterInitializer {
         try {
             zkClient.start();
             try {
-                zkClient.create().forPath(CACHE_CLUSTER_PATH);
+                zkClient.create().forPath(Constants.CACHE_CLUSTER_PATH);
                 CacheClusterZnode cacheClusterZnode = new CacheClusterZnode();
-                cacheClusterZnode.setVersion(CACHE_CLUSTER_INITIAL_VERSION);
-                zkClient.setData().forPath(CACHE_CLUSTER_PATH,
+                cacheClusterZnode.setVersion(Constants.CACHE_CLUSTER_INITIAL_VERSION);
+                zkClient.setData().forPath(Constants.CACHE_CLUSTER_PATH,
                         JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
             } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", CACHE_CLUSTER_PATH));
+                logger.info(String.format("zookeeper node[%s] exist", Constants.CACHE_CLUSTER_PATH));
             }
 
             try {
-                zkClient.create().forPath(CACHES_PATH);
+                zkClient.create().forPath(Constants.CACHES_PATH);
             } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", CACHES_PATH));
+                logger.info(String.format("zookeeper node[%s] exist", Constants.CACHES_PATH));
             }
 
             try {
-                zkClient.create().forPath(HOSTS_PATH);
+                zkClient.create().forPath(Constants.HOSTS_PATH);
             } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", HOSTS_PATH));
+                logger.info(String.format("zookeeper node[%s] exist", Constants.HOSTS_PATH));
             }
 
             try {
-                zkClient.create().forPath(CACHE_GROUPS_PATH);
+                zkClient.create().forPath(Constants.CACHE_GROUPS_PATH);
             } catch (KeeperException.NodeExistsException e) {
-                logger.info(String.format("zookeeper node[%s] exist", CACHE_GROUPS_PATH));
+                logger.info(String.format("zookeeper node[%s] exist", Constants.CACHE_GROUPS_PATH));
             }
             zkClient.close();
         } catch (Exception e) {

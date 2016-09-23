@@ -42,13 +42,8 @@ public enum CacheClusterService implements IService {
 
     private CuratorFramework zkClient;
 
-    private final String CACHE_CLUSTER_PATH = "/cache_cluster";
-    private final String CACHES_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/caches");
-    private final String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
-    private final String CACHE_GROUPS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/cache_groups");
-    private final String HOST_PATH_PREFIX = "host_";
-
-    InterProcessReadWriteLock clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
+    InterProcessReadWriteLock clusterGlobalLock =
+            new InterProcessReadWriteLock(zkClient, Constants.CACHE_CLUSTER_PATH);
 
     private final CacheClusterViewer cacheClusterViewer;
 
@@ -58,7 +53,7 @@ public enum CacheClusterService implements IService {
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
             zkClient.start();
 
-            clusterGlobalLock = new InterProcessReadWriteLock(zkClient, CACHE_CLUSTER_PATH);
+            clusterGlobalLock = new InterProcessReadWriteLock(zkClient, Constants.CACHE_CLUSTER_PATH);
 
             cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         } catch (Exception e) {
@@ -123,7 +118,7 @@ public enum CacheClusterService implements IService {
 
     private void doCreateCache(CacheMeta cacheMeta) throws Exception {
         String name = cacheMeta.getName();
-        String cacheZkPath = StringUtils.join(CACHES_PATH, "/", name);
+        String cacheZkPath = StringUtils.join(Constants.CACHES_PATH, "/", name);
         CacheZnode cacheZnode = new CacheZnode();
         cacheZnode.setName(cacheMeta.getName());
         cacheZnode.setVersion(cacheMeta.getVersion());
@@ -162,11 +157,11 @@ public enum CacheClusterService implements IService {
 
     public void increaseClusterVersion() throws Exception {
         CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
                 CacheClusterZnode.class);
         String zkClusterVersion = cacheClusterZnode.getVersion();
         cacheClusterZnode.setVersion(incVersion(zkClusterVersion));
-        zkClient.setData().forPath(CACHE_CLUSTER_PATH,
+        zkClient.setData().forPath(Constants.CACHE_CLUSTER_PATH,
                 JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
     }
 
@@ -279,7 +274,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -299,7 +295,7 @@ public enum CacheClusterService implements IService {
         while (true) {
             clusterGlobalLock.writeLock().acquire();
             CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                    new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                    new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
                     CacheClusterZnode.class);
             String zkClusterVersion = cacheClusterZnode.getVersion();
             String localClusterVersion = cacheClusterViewer.getCacheClusterMeta().getVersion();
@@ -315,7 +311,7 @@ public enum CacheClusterService implements IService {
     private void unlockIfVersionMatched() throws Exception {
         while (true) {
             CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                    new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                    new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
                     CacheClusterZnode.class);
             String zkClusterVersion = cacheClusterZnode.getVersion();
             String localClusterVersion = cacheClusterViewer.getCacheClusterMeta().getVersion();
@@ -330,7 +326,8 @@ public enum CacheClusterService implements IService {
 
     private void doAddHost(Host host) throws Exception {
         String hostPath = StringUtils.join(
-                HOSTS_PATH, "/", String.format("%s_%s", HOST_PATH_PREFIX, genIndexString(host.getId())));
+                Constants.HOSTS_PATH, "/",
+                String.format("%s_%s", Constants.HOST_PATH_PREFIX, genIndexString(host.getId())));
         zkClient.create().forPath(hostPath);
         zkClient.setData().forPath(hostPath, JsonUtils.toJson(host).getBytes(Charsets.UTF_8));
     }
@@ -360,7 +357,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -412,7 +410,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -469,7 +468,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -490,7 +490,7 @@ public enum CacheClusterService implements IService {
             cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
 
             String name = cacheGroupZnode.getCacheGroupName();
-            String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", name);
+            String cacheGroupZkPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", name);
             zkClient.create().forPath(cacheGroupZkPath);
             zkClient.setData().forPath(cacheGroupZkPath,
                     JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
@@ -504,7 +504,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
 
@@ -531,7 +532,7 @@ public enum CacheClusterService implements IService {
             cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
 
             String name = cacheGroupZnode.getCacheGroupName();
-            String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", name);
+            String cacheGroupZkPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", name);
             zkClient.setData().forPath(cacheGroupZkPath,
                     JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
 
@@ -546,7 +547,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
 
@@ -574,7 +576,7 @@ public enum CacheClusterService implements IService {
                 deleteCache(cache.getName(), false);
             }
 
-            String cacheGroupZkPath = StringUtils.join(CACHE_GROUPS_PATH, "/", cacheGroupName);
+            String cacheGroupZkPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", cacheGroupName);
             zkClient.delete().deletingChildrenIfNeeded().forPath(cacheGroupZkPath);
 
             // 增加版本号
@@ -583,7 +585,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
     }
@@ -624,7 +627,7 @@ public enum CacheClusterService implements IService {
             }
 
             String name = cacheMeta.getName();
-            String cacheZkPath = StringUtils.join(CACHES_PATH, "/", name);
+            String cacheZkPath = StringUtils.join(Constants.CACHES_PATH, "/", name);
             zkClient.delete().deletingChildrenIfNeeded().forPath(cacheZkPath);
 
             // 增加版本号
@@ -636,7 +639,8 @@ public enum CacheClusterService implements IService {
             try {
                 unlockIfVersionMatched();
             } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]", CACHE_CLUSTER_PATH), e);
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
             }
         }
     }

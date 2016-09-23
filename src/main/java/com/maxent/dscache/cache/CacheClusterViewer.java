@@ -29,11 +29,6 @@ public class CacheClusterViewer {
 
     private CuratorFramework zkClient;
 
-    private final String CACHE_CLUSTER_PATH = "/cache_cluster";
-    private final String CACHES_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/caches");
-    private final String HOSTS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/hosts");
-    private final String CACHE_GROUPS_PATH = StringUtils.join(CACHE_CLUSTER_PATH, "/cache_groups");
-
     private final long MONITOR_INTERVAL_MS = 1000L;
 
     private volatile CacheClusterMeta cacheCluster;
@@ -63,7 +58,7 @@ public class CacheClusterViewer {
             while (!closed) {
                 try {
                     CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                            new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                            new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
                             CacheClusterZnode.class);
                     String zkClusterVersion = cacheClusterZnode.getVersion();
                     String localClusterVersion = cacheCluster.getVersion();
@@ -99,7 +94,7 @@ public class CacheClusterViewer {
         CacheClusterMeta cacheClusterMeta = new CacheClusterMeta();
 
         CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                new String(zkClient.getData().forPath(CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
                 CacheClusterZnode.class);
 
         /**
@@ -111,9 +106,9 @@ public class CacheClusterViewer {
          * restore hosts
          */
         List<Host> hosts = new ArrayList<>();
-        List<String> hostsPath = sortPaths(zkClient.getChildren().forPath(HOSTS_PATH));
+        List<String> hostsPath = sortPaths(zkClient.getChildren().forPath(Constants.HOSTS_PATH));
         for (String hostPath : hostsPath) {
-            String fullHostPath = StringUtils.join(HOSTS_PATH, "/", hostPath);
+            String fullHostPath = StringUtils.join(Constants.HOSTS_PATH, "/", hostPath);
             Host host = JsonUtils.fromJson(
                     new String(zkClient.getData().forPath(fullHostPath), Charsets.UTF_8),
                     Host.class);
@@ -126,9 +121,9 @@ public class CacheClusterViewer {
          * restore caches
          */
         List<CacheMeta> caches = new ArrayList<>();
-        List<String> cachesPath = sortPaths(zkClient.getChildren().forPath(CACHES_PATH));
+        List<String> cachesPath = sortPaths(zkClient.getChildren().forPath(Constants.CACHES_PATH));
         for (String cachePath : cachesPath) {
-            String fullCachePath = StringUtils.join(CACHES_PATH, "/", cachePath);
+            String fullCachePath = StringUtils.join(Constants.CACHES_PATH, "/", cachePath);
             CacheZnode cacheZnode = JsonUtils.fromJson(
                     new String(zkClient.getData().forPath(fullCachePath), Charsets.UTF_8),
                     CacheZnode.class);
@@ -182,9 +177,9 @@ public class CacheClusterViewer {
          * restore cache groups
          */
         List<CacheGroupMeta> cacheGroupMetas = new ArrayList<>();
-        List<String> cacheGroups = sortPaths(zkClient.getChildren().forPath(CACHE_GROUPS_PATH));
+        List<String> cacheGroups = sortPaths(zkClient.getChildren().forPath(Constants.CACHE_GROUPS_PATH));
         for (String cacheGroupPath : cacheGroups) {
-            String fullCacheGroupPath = StringUtils.join(CACHE_GROUPS_PATH, "/", cacheGroupPath);
+            String fullCacheGroupPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", cacheGroupPath);
             CacheGroupZnode cacheGroupZnode = JsonUtils.fromJson(
                     new String(zkClient.getData().forPath(fullCacheGroupPath), Charsets.UTF_8),
                     CacheGroupZnode.class);
