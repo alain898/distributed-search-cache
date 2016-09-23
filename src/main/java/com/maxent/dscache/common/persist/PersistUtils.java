@@ -6,7 +6,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import com.google.common.base.Preconditions;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
@@ -17,7 +16,8 @@ public class PersistUtils {
     public static Flusher createFlusher(String name, String dir, String file) {
         Preconditions.checkArgument(new File(dir).exists(), String.format("dir[%s] not exist", dir));
 
-        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+//        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+        LoggerContext context = new LoggerContext();
         Logger logger = context.getLogger(name);
         logger.setAdditive(false);
 

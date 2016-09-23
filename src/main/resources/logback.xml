@@ -1,14 +1,14 @@
 <configuration debug="true" scan="true" scanPeriod="5 minutes">
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n%r</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%t] %-5p %c{36}[%file:%line]  - %m%n</pattern>
         </encoder>
     </appender>
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>
-                /services/logs/distributed-search-subCache/distributed-search-subCache.log-%d{yyyy-MM-dd_HH}.%i
+                /services/logs/distributed-search-subCache/distributed-search-cache.log-%d{yyyy-MM-dd_HH}.%i
             </fileNamePattern>
             <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <maxFileSize>100MB</maxFileSize>
@@ -17,7 +17,7 @@
         </rollingPolicy>
 
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%t] %-5p %c{36} - %m%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%t] %-5p %c{36}[%file:%line] - %m%n</pattern>
             <immediateFlush>false</immediateFlush>
             <outputPatternAsHeader>true</outputPatternAsHeader>
         </encoder>
