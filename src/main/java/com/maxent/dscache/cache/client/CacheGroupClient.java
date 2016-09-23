@@ -1,11 +1,11 @@
 package com.maxent.dscache.cache.client;
 
-import com.maxent.dscache.api.rest.request.RestUpdateCacheGroupRequest;
 import com.maxent.dscache.api.rest.request.RestCreateCacheGroupRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteCacheGroupRequest;
-import com.maxent.dscache.api.rest.response.RestUpdateCacheGroupResponse;
+import com.maxent.dscache.api.rest.request.RestUpdateCacheGroupRequest;
 import com.maxent.dscache.api.rest.response.RestCreateCacheGroupResponse;
 import com.maxent.dscache.api.rest.response.RestDeleteCacheGroupResponse;
+import com.maxent.dscache.api.rest.response.RestUpdateCacheGroupResponse;
 import com.maxent.dscache.cache.*;
 import com.maxent.dscache.cache.client.response.*;
 import com.maxent.dscache.common.http.HttpClient;

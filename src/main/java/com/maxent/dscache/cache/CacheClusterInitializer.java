@@ -4,7 +4,6 @@ import com.google.common.base.Charsets;
 import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
 import com.maxent.dscache.cache.exceptions.CacheInitializeFailureException;
 import com.maxent.dscache.common.tools.JsonUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
