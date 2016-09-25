@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,13 +36,11 @@ public class CacheClusterViewer {
 
     private volatile CacheClusterMeta cacheCluster;
 
+    private final InterProcessReadWriteLock clusterGlobalLock;
+
     private final Thread monitorThread;
 
     private volatile boolean closed = false;
-
-    public CacheClusterViewer() throws RuntimeException {
-        this(ConfigFactory.load());
-    }
 
     public CacheClusterViewer(Config config) throws RuntimeException {
         try {
@@ -54,6 +53,8 @@ public class CacheClusterViewer {
             RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
             zkClient = CuratorFrameworkFactory.newClient(zookeeperConnectionUrl, retryPolicy);
             zkClient.start();
+
+            clusterGlobalLock = new InterProcessReadWriteLock(zkClient, Constants.CACHE_CLUSTER_PATH);
 
             cacheCluster = doGetCacheClusterMeta();
 
@@ -76,9 +77,9 @@ public class CacheClusterViewer {
                     String localClusterVersion = cacheCluster.getVersion();
                     if (StringUtils.equals(zkClusterVersion, localClusterVersion)) {
                         Thread.sleep(MONITOR_INTERVAL_MS);
-                        continue;
+                    } else {
+                        cacheCluster = lockClusterAndGetCacheClusterMeta();
                     }
-                    cacheCluster = doGetCacheClusterMeta();
                 } catch (InterruptedException e) {
                     break;
                 } catch (Exception e) {
@@ -86,6 +87,20 @@ public class CacheClusterViewer {
                 }
             }
             logger.info("ClusterStatusMonitor exit");
+        }
+    }
+
+    private CacheClusterMeta lockClusterAndGetCacheClusterMeta() throws Exception {
+        clusterGlobalLock.readLock().acquire();
+        try {
+            return doGetCacheClusterMeta();
+        } finally {
+            try {
+                clusterGlobalLock.readLock().release();
+            } catch (Exception e) {
+                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
+                        Constants.CACHE_CLUSTER_PATH), e);
+            }
         }
     }
 
@@ -221,10 +236,6 @@ public class CacheClusterViewer {
 
     public CacheClusterMeta getCacheClusterMeta() {
         return this.cacheCluster;
-    }
-
-    public CacheClusterMeta getFreshCacheClusterMeta() throws Exception {
-        return doGetCacheClusterMeta();
     }
 
     private CacheMeta getCache(CacheClusterMeta cacheCluster, String name) {

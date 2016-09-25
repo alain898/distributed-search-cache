@@ -40,10 +40,9 @@ public class CacheClusterService {
 
     private final String zookeeperConnectionUrl;
 
-    private CuratorFramework zkClient;
+    private final CuratorFramework zkClient;
 
-    InterProcessReadWriteLock clusterGlobalLock =
-            new InterProcessReadWriteLock(zkClient, Constants.CACHE_CLUSTER_PATH);
+    private final InterProcessReadWriteLock clusterGlobalLock;
 
     private final CacheClusterViewer cacheClusterViewer;
 
