@@ -118,7 +118,7 @@ public class SubCacheService {
                                final int partitions,
                                final int blocks_per_partition,
                                final int block_capacity)
-            throws CacheExistException, CacheCreateFailureException {
+            throws CacheExistException, CacheCreateFailure {
 
         Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(entryClassName), "entryClassName is blank");
@@ -145,7 +145,7 @@ public class SubCacheService {
                 caches.putIfAbsent(cacheName, new ConcurrentHashMap<>());
                 caches.get(cacheName).put(subCacheId, subCache);
             } catch (Exception e) {
-                throw new CacheCreateFailureException(String.format(
+                throw new CacheCreateFailure(String.format(
                         "cacheName[%s] subCache[%s] create failed", cacheName, subCacheId), e);
             }
         }
@@ -154,7 +154,7 @@ public class SubCacheService {
 
     public void deleteSubCache(final String cacheName,
                                final String subCacheId)
-            throws CacheDeleteFailureException {
+            throws CacheDeleteFailure {
 
         Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(subCacheId), "subCacheId is blank");
@@ -174,10 +174,10 @@ public class SubCacheService {
     public void saveEntry(final String cacheName,
                           final String subCacheId,
                           final Map query)
-            throws CacheSaveFailureException {
+            throws CacheSaveFailure {
         SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
         if (subCache == null) {
-            throw new CacheSaveFailureException(String.format(
+            throw new CacheSaveFailure(String.format(
                     "cannot find cache[%s], subCache[%s]", cacheName, subCacheId));
         }
 
@@ -198,11 +198,11 @@ public class SubCacheService {
     public List<Pair<ICacheEntry, Double>> search(String cacheName,
                                                   String subCacheId,
                                                   Map query)
-            throws CacheMatchFailureException {
+            throws CacheSearchFailure {
 
         SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
         if (subCache == null) {
-            throw new CacheMatchFailureException(String.format(
+            throw new CacheSearchFailure(String.format(
                     "cannot find cache[%s], subCache[%s]", cacheName, subCacheId));
         }
 
@@ -220,11 +220,11 @@ public class SubCacheService {
                                                   String searchMode,
                                                   String searchPolicy,
                                                   Map query)
-            throws CacheMatchFailureException {
+            throws CacheSearchFailure {
 
         SubCache<ICacheEntry> subCache = getSubCache(cacheName, subCacheId);
         if (subCache == null) {
-            throw new CacheMatchFailureException(String.format(
+            throw new CacheSearchFailure(String.format(
                     "cannot find cache[%s], subCache[%s]", cacheName, subCacheId));
         }
 

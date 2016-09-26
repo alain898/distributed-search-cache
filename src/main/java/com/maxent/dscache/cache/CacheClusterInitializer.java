@@ -1,8 +1,8 @@
 package com.maxent.dscache.cache;
 
 import com.google.common.base.Charsets;
-import com.maxent.dscache.cache.exceptions.CacheCheckFailureException;
-import com.maxent.dscache.cache.exceptions.CacheInitializeFailureException;
+import com.maxent.dscache.cache.exceptions.CacheCheckFailure;
+import com.maxent.dscache.cache.exceptions.CacheInitializeFailure;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -39,7 +39,7 @@ public class CacheClusterInitializer {
     }
 
 
-    public void initClusterIfNot() throws CacheCheckFailureException, CacheInitializeFailureException {
+    public void initClusterIfNot() throws CacheCheckFailure, CacheInitializeFailure {
         try {
             zkClient.start();
             try {
@@ -71,7 +71,7 @@ public class CacheClusterInitializer {
             }
             zkClient.close();
         } catch (Exception e) {
-            throw new CacheInitializeFailureException("failed to check cluster", e);
+            throw new CacheInitializeFailure("failed to check cluster", e);
         }
     }
 }
