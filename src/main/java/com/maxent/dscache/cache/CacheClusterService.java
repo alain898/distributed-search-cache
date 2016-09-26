@@ -84,89 +84,106 @@ public class CacheClusterService {
         zkClient.close();
     }
 
-    private void createSubCachesInCluster(CacheMeta cacheMeta) throws CacheCreateFailure {
-        HttpClient httpClient = new HttpClient();
-        List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
-
+    private void deleteCacheInCluster(CacheMeta cacheMeta) throws CacheDeleteFailure {
         try {
-            int totalPartitionNumber = cacheMeta.getSubCacheMetas().size() * cacheMeta.getPartitionsPerSubCache();
+            HttpClient httpClient = new HttpClient();
+            List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
+
             for (SubCacheMeta subCache : subCaches) {
                 ReplicationMeta meta = subCache.getReplicationMetas().get(0);
                 Host host = meta.getHost();
                 String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-                String path = "/subcache/create";
-                RestCreateSubCacheRequest restCreateSubCacheRequest = new RestCreateSubCacheRequest();
-                restCreateSubCacheRequest.setName(cacheMeta.getName());
-                restCreateSubCacheRequest.setEntryClassName(cacheMeta.getEntryClassName());
-                restCreateSubCacheRequest.setTotalPartitionNumber(totalPartitionNumber);
-                restCreateSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
-                restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
-                restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
-                restCreateSubCacheRequest.setBlockCapacity(cacheMeta.getBlockCapacity());
-                RestCreateSubCacheResponse createCacheResponse =
-                        httpClient.post(url, path, restCreateSubCacheRequest, RestCreateSubCacheResponse.class);
-                if (createCacheResponse == null) {
-                    throw new CacheCreateFailure(String.format(
-                            "failed to create subcache[%s]", JsonUtils.toJson(subCache)));
-                }
-                if (createCacheResponse.getError() != null) {
-                    throw new CacheCreateFailure(String.format(
-                            "failed to create subcache[%s], error[%s]",
-                            JsonUtils.toJson(subCache), createCacheResponse.getError()));
-                }
+                String path = "/subcache/delete";
+                RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
+                restDeleteSubCacheRequest.setName(cacheMeta.getName());
+                restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+                httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
             }
         } catch (Exception e) {
-            for (SubCacheMeta subCache : subCaches) {
-                try {
-                    ReplicationMeta meta = subCache.getReplicationMetas().get(0);
-                    Host host = meta.getHost();
-                    String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-                    String path = "/subcache/delete";
-                    RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
-                    restDeleteSubCacheRequest.setName(cacheMeta.getName());
-                    restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
-                    httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
-                } catch (Exception e1) {
-                    logger.error(String.format("failed to clean cacheMeta[%s] subCache[%d] after create failed",
-                            cacheMeta.getName(), subCache.getId()), e1);
-                }
-            }
-            throw e;
+            throw new CacheDeleteFailure(String.format("failed to delete cacheMeta[%s]",
+                    cacheMeta.getName()), e);
         }
     }
 
-    private void doCreateCache(CacheMeta cacheMeta) throws Exception {
-        String name = cacheMeta.getName();
-        String cacheZkPath = StringUtils.join(Constants.CACHES_PATH, "/", name);
-        CacheZnode cacheZnode = new CacheZnode();
-        cacheZnode.setName(cacheMeta.getName());
-        cacheZnode.setVersion(cacheMeta.getVersion());
-        cacheZnode.setEntryClassName(cacheMeta.getEntryClassName());
-        cacheZnode.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
-        cacheZnode.setBlockCapacity(cacheMeta.getBlockCapacity());
-        cacheZnode.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
-        cacheZnode.setCacheGroup(cacheMeta.getCacheGroup());
-        cacheZnode.setForwardCache(cacheMeta.getForwardCache());
-        cacheZnode.setForwardThreshold(cacheMeta.getForwardThreshold());
-        zkClient.create().forPath(cacheZkPath);
-        zkClient.setData().forPath(cacheZkPath, JsonUtils.toJson(cacheZnode).getBytes(Charsets.UTF_8));
+    private void createCacheInCluster(CacheMeta cacheMeta) throws CacheCreateFailure {
+        HttpClient httpClient = new HttpClient();
+        List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
 
-        for (SubCacheMeta subCacheMeta : cacheMeta.getSubCacheMetas()) {
-            SubCacheZnode subCacheZnode = new SubCacheZnode();
-            subCacheZnode.setId(subCacheMeta.getId());
-            String subCacheZkPath = StringUtils.join(cacheZkPath, "/", subCacheMeta.getZkNodeName());
-            zkClient.create().forPath(subCacheZkPath);
-            zkClient.setData().forPath(subCacheZkPath, JsonUtils.toJson(subCacheZnode).getBytes(Charsets.UTF_8));
-
-            for (ReplicationMeta replicationMeta : subCacheMeta.getReplicationMetas()) {
-                ReplicationZnode replicationZnode = new ReplicationZnode();
-                replicationZnode.setId(replicationMeta.getId());
-                replicationZnode.setHostId(replicationMeta.getHost().getId());
-                String replicationZkPath = StringUtils.join(subCacheZkPath, "/", replicationMeta.getZkNodeName());
-                zkClient.create().forPath(replicationZkPath);
-                zkClient.setData().forPath(replicationZkPath,
-                        JsonUtils.toJson(replicationZnode).getBytes(Charsets.UTF_8));
+        int totalPartitionNumber = cacheMeta.getSubCacheMetas().size() * cacheMeta.getPartitionsPerSubCache();
+        for (SubCacheMeta subCache : subCaches) {
+            ReplicationMeta meta = subCache.getReplicationMetas().get(0);
+            Host host = meta.getHost();
+            String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+            String path = "/subcache/create";
+            RestCreateSubCacheRequest restCreateSubCacheRequest = new RestCreateSubCacheRequest();
+            restCreateSubCacheRequest.setName(cacheMeta.getName());
+            restCreateSubCacheRequest.setEntryClassName(cacheMeta.getEntryClassName());
+            restCreateSubCacheRequest.setTotalPartitionNumber(totalPartitionNumber);
+            restCreateSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+            restCreateSubCacheRequest.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
+            restCreateSubCacheRequest.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
+            restCreateSubCacheRequest.setBlockCapacity(cacheMeta.getBlockCapacity());
+            RestCreateSubCacheResponse createCacheResponse =
+                    httpClient.post(url, path, restCreateSubCacheRequest, RestCreateSubCacheResponse.class);
+            if (createCacheResponse == null) {
+                throw new CacheCreateFailure(String.format(
+                        "failed to create subcache[%s]", JsonUtils.toJson(subCache)));
             }
+            if (createCacheResponse.getError() != null) {
+                throw new CacheCreateFailure(String.format(
+                        "failed to create subcache[%s], error[%s]",
+                        JsonUtils.toJson(subCache), createCacheResponse.getError()));
+            }
+        }
+    }
+
+    private void deleteCacheInZookeeper(CacheMeta cacheMeta) throws CacheDeleteFailure {
+        try {
+            String name = cacheMeta.getName();
+            String cacheZkPath = StringUtils.join(Constants.CACHES_PATH, "/", name);
+            zkClient.delete().deletingChildrenIfNeeded().forPath(cacheZkPath);
+        } catch (Exception e) {
+            throw new CacheDeleteFailure(String.format(
+                    "CacheDeleteFailure, cache name[%s]", cacheMeta.getName()), e);
+        }
+    }
+
+    private void createCacheInZookeeper(CacheMeta cacheMeta) throws CacheCreateFailure {
+        try {
+            String name = cacheMeta.getName();
+            String cacheZkPath = StringUtils.join(Constants.CACHES_PATH, "/", name);
+            CacheZnode cacheZnode = new CacheZnode();
+            cacheZnode.setName(cacheMeta.getName());
+            cacheZnode.setVersion(cacheMeta.getVersion());
+            cacheZnode.setEntryClassName(cacheMeta.getEntryClassName());
+            cacheZnode.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
+            cacheZnode.setBlockCapacity(cacheMeta.getBlockCapacity());
+            cacheZnode.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
+            cacheZnode.setCacheGroup(cacheMeta.getCacheGroup());
+            cacheZnode.setForwardCache(cacheMeta.getForwardCache());
+            cacheZnode.setForwardThreshold(cacheMeta.getForwardThreshold());
+            zkClient.create().forPath(cacheZkPath);
+            zkClient.setData().forPath(cacheZkPath, JsonUtils.toJson(cacheZnode).getBytes(Charsets.UTF_8));
+
+            for (SubCacheMeta subCacheMeta : cacheMeta.getSubCacheMetas()) {
+                SubCacheZnode subCacheZnode = new SubCacheZnode();
+                subCacheZnode.setId(subCacheMeta.getId());
+                String subCacheZkPath = StringUtils.join(cacheZkPath, "/", subCacheMeta.getZkNodeName());
+                zkClient.create().forPath(subCacheZkPath);
+                zkClient.setData().forPath(subCacheZkPath, JsonUtils.toJson(subCacheZnode).getBytes(Charsets.UTF_8));
+
+                for (ReplicationMeta replicationMeta : subCacheMeta.getReplicationMetas()) {
+                    ReplicationZnode replicationZnode = new ReplicationZnode();
+                    replicationZnode.setId(replicationMeta.getId());
+                    replicationZnode.setHostId(replicationMeta.getHost().getId());
+                    String replicationZkPath = StringUtils.join(subCacheZkPath, "/", replicationMeta.getZkNodeName());
+                    zkClient.create().forPath(replicationZkPath);
+                    zkClient.setData().forPath(replicationZkPath,
+                            JsonUtils.toJson(replicationZnode).getBytes(Charsets.UTF_8));
+                }
+            }
+        } catch (Exception e) {
+            throw new CacheCreateFailure("CacheCreateFailure", e);
         }
     }
 
@@ -174,18 +191,22 @@ public class CacheClusterService {
         return String.valueOf(Integer.parseInt(version) + 1);
     }
 
-    public void increaseClusterVersion() throws Exception {
-        CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
-                CacheClusterZnode.class);
-        String zkClusterVersion = cacheClusterZnode.getVersion();
-        cacheClusterZnode.setVersion(incVersion(zkClusterVersion));
-        zkClient.setData().forPath(Constants.CACHE_CLUSTER_PATH,
-                JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
+    private void increaseClusterVersion() throws CacheVersionModifyFailure {
+        try {
+            CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
+                    new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                    CacheClusterZnode.class);
+            String zkClusterVersion = cacheClusterZnode.getVersion();
+            cacheClusterZnode.setVersion(incVersion(zkClusterVersion));
+            zkClient.setData().forPath(Constants.CACHE_CLUSTER_PATH,
+                    JsonUtils.toJson(cacheClusterZnode).getBytes(Charsets.UTF_8));
+        } catch (Exception e) {
+            throw new CacheVersionModifyFailure("failed to increaseClusterVersion", e);
+        }
     }
 
     private String genIndexString(long index) {
-        return String.format("%016d", index);
+        return String.format("%08d", index);
     }
 
     private Map<Integer, Integer> countHostsUsageOfCacheGroup(CacheGroupMeta cacheGroupMeta, List<Host> hosts) {
@@ -227,6 +248,14 @@ public class CacheClusterService {
         return keyWithMinValue;
     }
 
+    private void backupCacheClusterMeta() throws CacheClusterMetaBackupFailure {
+
+    }
+
+    private void removeCacheClusterMetaBackup() {
+
+    }
+
     public CacheMeta createCache(String name, String entryClassName,
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition,
@@ -234,6 +263,7 @@ public class CacheClusterService {
                                  long forwardThreshold,
                                  boolean incClusterVersion) throws Exception {
         lockIfVersionMatched();
+
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
@@ -275,17 +305,35 @@ public class CacheClusterService {
             cacheMeta.setSubCacheMetas(subCacheMetas);
             cacheMeta.setPartitionsPerSubCache(partitionsPerSubCache);
 
+            // 保存副本
+            backupCacheClusterMeta();
 
-            // 先改变集群的状态
-            createSubCachesInCluster(cacheMeta);
+            // 改变集群的状态
+            try {
+                createCacheInCluster(cacheMeta);
+            } catch (CacheCreateFailure e) {
+                deleteCacheInCluster(cacheMeta);
+            }
 
-            // 再改变集群在zookeeper中的状态
-            doCreateCache(cacheMeta);
+            // 改变集群在zookeeper中的状态
+            try {
+                createCacheInZookeeper(cacheMeta);
+            } catch (CacheCreateFailure e) {
+                deleteCacheInCluster(cacheMeta);
+                deleteCacheInZookeeper(cacheMeta);
+            }
 
             // 增加版本号
             if (incClusterVersion) {
-                increaseClusterVersion();
+                try {
+                    increaseClusterVersion();
+                } catch (CacheVersionModifyFailure e) {
+                    deleteCacheInCluster(cacheMeta);
+                    deleteCacheInZookeeper(cacheMeta);
+                }
             }
+
+            removeCacheClusterMetaBackup();
 
             return cacheMeta;
 
