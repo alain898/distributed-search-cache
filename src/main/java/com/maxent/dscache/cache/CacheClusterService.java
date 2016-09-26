@@ -291,7 +291,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -334,11 +334,31 @@ public class CacheClusterService {
         }
     }
 
-    private void unlockCluster() throws CacheLockException {
+    private void unlockAndTryToWaitUntilVersionMatched() throws CacheLockException, InterruptedException {
         try {
             clusterGlobalLock.writeLock().release();
         } catch (Exception e) {
             throw new CacheLockException("clusterGlobalLock.writeLock().release failed", e);
+        }
+
+        try {
+            while (true) {
+                CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
+                        new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
+                        CacheClusterZnode.class);
+                String zkClusterVersion = cacheClusterZnode.getVersion();
+                String localClusterVersion = cacheClusterViewer.getCacheClusterMeta().getVersion();
+                if (StringUtils.equals(zkClusterVersion, localClusterVersion)) {
+                    break;
+                } else {
+                    Thread.sleep(100);
+                }
+            }
+        } catch (InterruptedException e) {
+            logger.warn("InterruptedException caught");
+            throw e;
+        } catch (Exception e) {
+            logger.warn("failed to wait until version matched");
         }
     }
 
@@ -373,7 +393,7 @@ public class CacheClusterService {
             increaseClusterVersion();
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -426,7 +446,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -484,7 +504,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -520,7 +540,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -563,7 +583,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -601,7 +621,7 @@ public class CacheClusterService {
             increaseClusterVersion();
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -655,7 +675,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                unlockCluster();
+                unlockAndTryToWaitUntilVersionMatched();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
