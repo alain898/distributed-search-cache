@@ -19,6 +19,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.locks.InterProcessReadWriteLock;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -261,7 +262,16 @@ public class CacheClusterService {
                                  int blockCapacity, int blocksPerPartition,
                                  String cacheGroup, String forwardCache,
                                  long forwardThreshold,
-                                 boolean incClusterVersion) throws Exception {
+                                 boolean updateVersion) throws CacheExistException, Exception {
+        Preconditions.checkArgument(StringUtils.isNotBlank(name), "name is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(entryClassName), "entryClassName is blank");
+        Preconditions.checkArgument(Validator.isValidSubCachesNumber(subCaches), "invalid subCaches");
+        Preconditions.checkArgument(Validator.isValidPartitions(partitionsPerSubCache), "invalid partitionsPerSubCache");
+        Preconditions.checkArgument(Validator.isValidBlockCapacity(blockCapacity), "invalid blockCapacity");
+        Preconditions.checkArgument(Validator.isValidBlocks(blocksPerPartition), "invalid blocksPerPartition");
+        Preconditions.checkArgument(Validator.isValidCacheGroup(cacheGroup), "invalid cacheGroup");
+        Preconditions.checkArgument(Validator.isValidForwardThreshold(forwardThreshold), "invalid isValidForwardThreshold");
+
         lockIfVersionMatched();
 
         try {
@@ -306,7 +316,9 @@ public class CacheClusterService {
             cacheMeta.setPartitionsPerSubCache(partitionsPerSubCache);
 
             // 保存副本
-            backupCacheClusterMeta();
+            if (updateVersion) {
+                backupCacheClusterMeta();
+            }
 
             // 改变集群的状态
             try {
@@ -324,7 +336,7 @@ public class CacheClusterService {
             }
 
             // 增加版本号
-            if (incClusterVersion) {
+            if (updateVersion) {
                 try {
                     increaseClusterVersion();
                 } catch (CacheVersionModifyFailure e) {
@@ -333,7 +345,9 @@ public class CacheClusterService {
                 }
             }
 
-            removeCacheClusterMetaBackup();
+            if (updateVersion) {
+                removeCacheClusterMetaBackup();
+            }
 
             return cacheMeta;
 
@@ -351,11 +365,11 @@ public class CacheClusterService {
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition,
                                  boolean incClusterVersion)
-            throws Exception {
+            throws CacheExistException, Exception {
         return createCache(name, entryClassName,
                 subCaches, partitionsPerSubCache,
                 blockCapacity, blocksPerPartition,
-                null, null, -1, incClusterVersion);
+                null, null, 100, incClusterVersion);
     }
 
     private void lockIfVersionMatched() throws CacheLockException, InterruptedException {
@@ -410,15 +424,28 @@ public class CacheClusterService {
         }
     }
 
-    private void doAddHost(Host host) throws Exception {
+    private void addHostInZookeeper(Host host) throws HostExistException, HostAddFailure {
+        try {
+            String hostPath = StringUtils.join(
+                    Constants.HOSTS_PATH, "/",
+                    String.format("%s_%s", Constants.HOST_PATH_PREFIX, genIndexString(host.getId())));
+            zkClient.create().forPath(hostPath);
+            zkClient.setData().forPath(hostPath, JsonUtils.toJson(host).getBytes(Charsets.UTF_8));
+        } catch (KeeperException.NodeExistsException e) {
+            throw new HostExistException(e);
+        } catch (Exception e) {
+            throw new HostAddFailure(e);
+        }
+    }
+
+    private void deleteHostInZookeeper(Host host) throws Exception {
         String hostPath = StringUtils.join(
                 Constants.HOSTS_PATH, "/",
                 String.format("%s_%s", Constants.HOST_PATH_PREFIX, genIndexString(host.getId())));
-        zkClient.create().forPath(hostPath);
-        zkClient.setData().forPath(hostPath, JsonUtils.toJson(host).getBytes(Charsets.UTF_8));
+        zkClient.delete().forPath(hostPath);
     }
 
-    public void addHosts(List<Host> newHosts) throws Exception {
+    public void addHosts(List<Host> newHosts) throws CacheHostExistException, Exception {
         lockIfVersionMatched();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
@@ -430,12 +457,33 @@ public class CacheClusterService {
                 }
             }
 
+            // 保存副本
+            backupCacheClusterMeta();
+
+            List<Host> succeed = new ArrayList<>();
+            boolean failed = false;
             int newHostIdStart = hosts.size();
             for (int i = 0; i < newHosts.size(); i++) {
                 Host newHost = newHosts.get(i);
                 newHost.setId(newHostIdStart + i);
-                doAddHost(newHost);
+                try {
+                    addHostInZookeeper(newHost);
+                    succeed.add(newHost);
+                } catch (HostExistException e) {
+                    logger.warn(String.format("host[%s] exist", JsonUtils.toJson(newHost)), e);
+                } catch (HostAddFailure e) {
+                    logger.error(String.format("add host[%s] failure", JsonUtils.toJson(newHost)), e);
+                    failed = true;
+                }
             }
+
+            if (failed) {
+                for (Host host : succeed) {
+                    deleteHostInZookeeper(host);
+                }
+            }
+
+            removeCacheClusterMetaBackup();
 
             // 增加版本号
             increaseClusterVersion();
@@ -682,7 +730,7 @@ public class CacheClusterService {
     }
 
     public void deleteCache(String cacheName,
-                            boolean incClusterVersion) throws Exception {
+                            boolean updateVersion) throws Exception {
         lockIfVersionMatched();
         HttpClient httpClient = new HttpClient();
         try {
@@ -717,7 +765,7 @@ public class CacheClusterService {
             zkClient.delete().deletingChildrenIfNeeded().forPath(cacheZkPath);
 
             // 增加版本号
-            if (incClusterVersion) {
+            if (updateVersion) {
                 increaseClusterVersion();
             }
 
