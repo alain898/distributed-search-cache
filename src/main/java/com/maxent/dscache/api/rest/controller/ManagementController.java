@@ -38,7 +38,7 @@ public class ManagementController {
                                          final RestAddHostsRequest request) {
         try {
             List<Host> newHosts = HostUtils.parseHosts(request.getHosts());
-            cacheClusterService.addHosts(newHosts);
+            cacheClusterService.addHosts(newHosts, true);
             RestAddHostsResponse response = new RestAddHostsResponse();
             response.setResult("success");
             return response;
