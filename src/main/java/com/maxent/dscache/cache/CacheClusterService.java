@@ -325,6 +325,10 @@ public class CacheClusterService {
                 createCacheInCluster(cacheMeta);
             } catch (CacheCreateFailure e) {
                 deleteCacheInCluster(cacheMeta);
+                if (incClusterVersion) {
+                    removeCacheClusterMetaBackup();
+                }
+                return null;
             }
 
             // 改变集群在zookeeper中的状态
@@ -333,6 +337,10 @@ public class CacheClusterService {
             } catch (CacheCreateFailure e) {
                 deleteCacheInCluster(cacheMeta);
                 deleteCacheInZookeeper(cacheMeta);
+                if (incClusterVersion) {
+                    removeCacheClusterMetaBackup();
+                }
+                return null;
             }
 
             // 增加版本号
@@ -342,6 +350,8 @@ public class CacheClusterService {
                 } catch (CacheVersionModifyFailure e) {
                     deleteCacheInCluster(cacheMeta);
                     deleteCacheInZookeeper(cacheMeta);
+                    removeCacheClusterMetaBackup();
+                    return null;
                 }
             }
 
@@ -353,7 +363,7 @@ public class CacheClusterService {
 
         } finally {
             try {
-                unlockAndTryToWaitUntilVersionMatched();
+                unlockCluster();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -396,31 +406,11 @@ public class CacheClusterService {
         }
     }
 
-    private void unlockAndTryToWaitUntilVersionMatched() throws CacheLockException, InterruptedException {
+    private void unlockCluster() throws CacheLockException {
         try {
             clusterGlobalLock.writeLock().release();
         } catch (Exception e) {
             throw new CacheLockException("clusterGlobalLock.writeLock().release failed", e);
-        }
-
-        try {
-            while (true) {
-                CacheClusterZnode cacheClusterZnode = JsonUtils.fromJson(
-                        new String(zkClient.getData().forPath(Constants.CACHE_CLUSTER_PATH), Charsets.UTF_8),
-                        CacheClusterZnode.class);
-                String zkClusterVersion = cacheClusterZnode.getVersion();
-                String localClusterVersion = cacheClusterViewer.getCacheClusterMeta().getVersion();
-                if (StringUtils.equals(zkClusterVersion, localClusterVersion)) {
-                    break;
-                } else {
-                    Thread.sleep(100);
-                }
-            }
-        } catch (InterruptedException e) {
-            logger.warn("InterruptedException caught");
-            throw e;
-        } catch (Exception e) {
-            logger.warn("failed to wait until version matched");
         }
     }
 
@@ -483,11 +473,23 @@ public class CacheClusterService {
                 for (Host host : succeed) {
                     deleteHostInZookeeper(host);
                 }
+                if (incClusterVersion) {
+                    removeCacheClusterMetaBackup();
+                }
+                return;
             }
 
             // 增加版本号
             if (incClusterVersion) {
-                increaseClusterVersion();
+                try {
+                    increaseClusterVersion();
+                } catch (CacheVersionModifyFailure e) {
+                    for (Host host : succeed) {
+                        deleteHostInZookeeper(host);
+                    }
+                    removeCacheClusterMetaBackup();
+                    return;
+                }
             }
 
             if (incClusterVersion) {
@@ -495,7 +497,7 @@ public class CacheClusterService {
             }
         } finally {
             try {
-                unlockAndTryToWaitUntilVersionMatched();
+                unlockCluster();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -520,6 +522,9 @@ public class CacheClusterService {
                 throw new CacheGroupCreateFailure("failed to add cache in cacheGroupName");
             }
 
+            // 保存副本
+            backupCacheClusterMeta();
+
             String entryClassName = cacheGroupMeta.getEntryClassName();
             int subCachesPerCache = cacheGroupMeta.getSubCachesPerCache();
             int partitionsPerSubCache = cacheGroupMeta.getPartitionsPerSubCache();
@@ -527,28 +532,74 @@ public class CacheClusterService {
             int blocksPerPartition = cacheGroupMeta.getBlocksPerPartition();
             int cachesNumber = cacheGroupMeta.getCurrentCachesNumber();
             List<CacheMeta> newCaches = new ArrayList<>();
+            boolean failed = false;
             for (int i = 0; i < addedCaches; i++) {
                 String cacheName = String.format("%s_cache_%s", cacheGroupName, genIndexString(cachesNumber + i));
                 String forwardCache = String.format("%s_cache_%s", cacheGroupName, genIndexString(i % cachesNumber));
                 long forwardThreshold = 99; //TODO: add to request parameter
-                CacheMeta newCache = createCache(
-                        cacheName, entryClassName,
-                        subCachesPerCache, partitionsPerSubCache,
-                        blockCapacity, blocksPerPartition,
-                        cacheGroupName,
-                        forwardCache, forwardThreshold,
-                        false);
-                newCaches.add(newCache);
+                try {
+                    CacheMeta newCache = createCache(
+                            cacheName, entryClassName,
+                            subCachesPerCache, partitionsPerSubCache,
+                            blockCapacity, blocksPerPartition,
+                            cacheGroupName,
+                            forwardCache, forwardThreshold,
+                            false);
+                    if (newCache == null) {
+                        failed = true;
+                        break;
+                    }
+                    newCaches.add(newCache);
+                } catch (CacheExistException e) {
+                    logger.error(String.format("failed to create cache, " +
+                                    "cacheName[%s], entryClassName[%s], " +
+                                    "subCachesPerCache[%d], partitionsPerSubCache[%d], " +
+                                    "blockCapacity[%d], blocksPerPartition[%d], " +
+                                    "cacheGroupName[%s], forwardCache[%s], forwardThreshold[%d]",
+                            cacheName, entryClassName,
+                            subCachesPerCache, partitionsPerSubCache,
+                            blockCapacity, blocksPerPartition,
+                            cacheGroupName, forwardCache, forwardThreshold), e);
+                    failed = true;
+                    break;
+                }
             }
 
-            doAddCacheInCacheGroup(cacheGroupMeta, newCaches);
+            if (failed) {
+                for (CacheMeta cacheMeta : newCaches) {
+                    deleteCache(cacheMeta.getName(), false);
+                }
+                removeCacheClusterMetaBackup();
+                return;
+            }
+
+            try {
+                addCacheInCacheGroup(cacheGroupMeta, newCaches);
+            } catch (CacheGroupAddCacheFailure e) {
+                for (CacheMeta cacheMeta : newCaches) {
+                    deleteCache(cacheMeta.getName(), false);
+                }
+                removeCacheClusterMetaBackup();
+                return;
+            }
 
             // 增加版本号
-            increaseClusterVersion();
+            try {
+                increaseClusterVersion();
+            } catch (CacheVersionModifyFailure e) {
+                deleteCacheInCacheGroup(cacheGroupMeta, newCaches);
+                for (CacheMeta cacheMeta : newCaches) {
+                    deleteCache(cacheMeta.getName(), false);
+                }
+                removeCacheClusterMetaBackup();
+                return;
+            }
+
+            removeCacheClusterMetaBackup();
 
         } finally {
             try {
-                unlockAndTryToWaitUntilVersionMatched();
+                unlockCluster();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -575,16 +626,46 @@ public class CacheClusterService {
                 }
             }
 
+            // 保存副本
+            backupCacheClusterMeta();
+
             List<CacheMeta> cacheMetas = new ArrayList<>();
+            boolean failed = false;
             for (int i = 0; i < cachesNumber; i++) {
                 String cacheName = String.format("%s_cache_%s", cacheGroupName, genIndexString(i));
-                CacheMeta cacheMeta = createCache(
-                        cacheName, entryClassName,
-                        subCachesPerCache, partitionsPerSubCache,
-                        blockCapacity, blocksPerPartition,
-                        cacheGroupName, null, -1,
-                        false);
-                cacheMetas.add(cacheMeta);
+                try {
+                    CacheMeta cacheMeta = createCache(
+                            cacheName, entryClassName,
+                            subCachesPerCache, partitionsPerSubCache,
+                            blockCapacity, blocksPerPartition,
+                            cacheGroupName, null, 100,
+                            false);
+                    if (cacheMeta == null) {
+                        failed = true;
+                        break;
+                    }
+                    cacheMetas.add(cacheMeta);
+                } catch (CacheExistException e) {
+                    logger.error(String.format("failed to create cache, " +
+                                    "cacheName[%s], entryClassName[%s], " +
+                                    "subCachesPerCache[%d], partitionsPerSubCache[%d], " +
+                                    "blockCapacity[%d], blocksPerPartition[%d], " +
+                                    "cacheGroupName[%s], forwardCache[%s], forwardThreshold[%d]",
+                            cacheName, entryClassName,
+                            subCachesPerCache, partitionsPerSubCache,
+                            blockCapacity, blocksPerPartition,
+                            cacheGroupName, null, 100), e);
+                    failed = true;
+                    break;
+                }
+            }
+
+            if (failed) {
+                for (CacheMeta cacheMeta : cacheMetas) {
+                    deleteCache(cacheMeta.getName(), false);
+                }
+                removeCacheClusterMetaBackup();
+                return;
             }
 
             CacheGroupMeta cacheGroupMeta = new CacheGroupMeta();
@@ -599,14 +680,33 @@ public class CacheClusterService {
             cacheGroupMeta.setBlocksPerPartition(blocksPerPartition);
             cacheGroupMeta.setBlockCapacity(blockCapacity);
 
-            doCreateCacheGroupInZookeeper(cacheGroupMeta);
+            try {
+                createCacheGroupInZookeeper(cacheGroupMeta);
+            } catch (CacheGroupCreateFailure e) {
+                deleteCacheGroupInZookeeper(cacheGroupMeta);
+                for (CacheMeta cacheMeta : cacheMetas) {
+                    deleteCache(cacheMeta.getName(), false);
+                }
+                removeCacheClusterMetaBackup();
+                return;
+            }
 
             // 增加版本号
-            increaseClusterVersion();
+            try {
+                increaseClusterVersion();
+            } catch (CacheVersionModifyFailure e) {
+                deleteCacheGroupInZookeeper(cacheGroupMeta);
+                for (CacheMeta cacheMeta : cacheMetas) {
+                    deleteCache(cacheMeta.getName(), false);
+                }
+                removeCacheClusterMetaBackup();
+                return;
+            }
 
+            removeCacheClusterMetaBackup();
         } finally {
             try {
-                unlockAndTryToWaitUntilVersionMatched();
+                unlockCluster();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -614,8 +714,7 @@ public class CacheClusterService {
         }
     }
 
-    private void doCreateCacheGroupInZookeeper(CacheGroupMeta cacheGroupMeta) throws Exception {
-        lockIfVersionMatched();
+    private void createCacheGroupInZookeeper(CacheGroupMeta cacheGroupMeta) throws CacheGroupCreateFailure {
         try {
             CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
 
@@ -639,59 +738,97 @@ public class CacheClusterService {
                 String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
                 zkClient.create().forPath(cacheZkPath);
             }
-
-        } finally {
-            try {
-                unlockAndTryToWaitUntilVersionMatched();
-            } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
-                        Constants.CACHE_CLUSTER_PATH), e);
-            }
+        } catch (Exception e) {
+            throw new CacheGroupCreateFailure(String.format(
+                    "failed to create group[%s]", cacheGroupMeta.getCacheGroupName()), e);
         }
-
     }
 
+    private void deleteCacheGroupInZookeeper(CacheGroupMeta cacheGroupMeta) throws Exception {
+        String name = cacheGroupMeta.getCacheGroupName();
+        String cacheGroupZkPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", name);
+        zkClient.delete().forPath(cacheGroupZkPath);
+        for (CacheMeta cacheMeta : cacheGroupMeta.getCacheMetas()) {
+            String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
+            zkClient.delete().forPath(cacheZkPath);
+        }
+    }
 
-    private void doAddCacheInCacheGroup(CacheGroupMeta cacheGroupMeta, List<CacheMeta> newCacheMetas) throws Exception {
-        lockIfVersionMatched();
+    private void deleteCacheInCacheGroup(CacheGroupMeta cacheGroupMeta, List<CacheMeta> newCacheMetas)
+            throws Exception {
+        CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
+        cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
+        cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
+        cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
+        cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
+        cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
+        cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
+        cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
+        cacheGroupZnode.setBlockCapacity(cacheGroupMeta.getBlockCapacity());
+        cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
+
+        String name = cacheGroupZnode.getCacheGroupName();
+        String cacheGroupZkPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", name);
+        zkClient.setData().forPath(cacheGroupZkPath,
+                JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
+
+        for (CacheMeta cacheMeta : newCacheMetas) {
+            String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
+            zkClient.delete().forPath(cacheZkPath);
+        }
+    }
+
+    private void addCacheInCacheGroup(CacheGroupMeta cacheGroupMeta, List<CacheMeta> newCacheMetas)
+            throws CacheGroupAddCacheFailure, Exception {
+        List<CacheMeta> allCacheMetas = new ArrayList<>();
+        allCacheMetas.addAll(cacheGroupMeta.getCacheMetas());
+        allCacheMetas.addAll(newCacheMetas);
+
+
+        CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
+        cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
+        cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
+        cacheGroupZnode.setCurrentCachesNumber(allCacheMetas.size());
+        cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
+        cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
+        cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
+        cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
+        cacheGroupZnode.setBlockCapacity(cacheGroupMeta.getBlockCapacity());
+        cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
+
+        String name = cacheGroupZnode.getCacheGroupName();
+        String cacheGroupZkPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", name);
         try {
-            List<CacheMeta> allCacheMetas = new ArrayList<>();
-            allCacheMetas.addAll(cacheGroupMeta.getCacheMetas());
-            allCacheMetas.addAll(newCacheMetas);
-
-
-            CacheGroupZnode cacheGroupZnode = new CacheGroupZnode();
-            cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
-            cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
-            cacheGroupZnode.setCurrentCachesNumber(allCacheMetas.size());
-            cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
-            cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
-            cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
-            cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
-            cacheGroupZnode.setBlockCapacity(cacheGroupMeta.getBlockCapacity());
-            cacheGroupZnode.setBlocksPerPartition(cacheGroupMeta.getBlocksPerPartition());
-
-            String name = cacheGroupZnode.getCacheGroupName();
-            String cacheGroupZkPath = StringUtils.join(Constants.CACHE_GROUPS_PATH, "/", name);
             zkClient.setData().forPath(cacheGroupZkPath,
                     JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
-
-            for (CacheMeta cacheMeta : newCacheMetas) {
-                String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
-                zkClient.create().forPath(cacheZkPath);
-            }
-
-            // // TODO: 16/9/8 roll back if failed
-
-        } finally {
-            try {
-                unlockAndTryToWaitUntilVersionMatched();
-            } catch (Exception e) {
-                logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
-                        Constants.CACHE_CLUSTER_PATH), e);
-            }
+        } catch (Exception e) {
+            throw new CacheGroupAddCacheFailure(String.format(
+                    "failed to setData for path[%s]", cacheGroupZkPath), e);
         }
 
+        List<String> succeed = new ArrayList<>();
+        boolean failed = false;
+        for (CacheMeta cacheMeta : newCacheMetas) {
+            String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
+            try {
+                zkClient.create().forPath(cacheZkPath);
+                succeed.add(cacheZkPath);
+            } catch (Exception e) {
+                logger.error("failed to crate zk path");
+                failed = true;
+                break;
+            }
+        }
+        if (failed) {
+            cacheGroupZnode.setCurrentCachesNumber(allCacheMetas.size() - newCacheMetas.size());
+            zkClient.setData().forPath(cacheGroupZkPath,
+                    JsonUtils.toJson(cacheGroupZnode).getBytes(Charsets.UTF_8));
+            for (String cacheZkPath : succeed) {
+                zkClient.delete().forPath(cacheZkPath);
+            }
+            throw new CacheGroupAddCacheFailure(String.format(
+                    "failed to add cache in group[%s]", cacheGroupMeta.getCacheGroupName()));
+        }
     }
 
     public void deleteCacheGroup(String cacheGroupName) throws Exception {
@@ -723,7 +860,7 @@ public class CacheClusterService {
             increaseClusterVersion();
         } finally {
             try {
-                unlockAndTryToWaitUntilVersionMatched();
+                unlockCluster();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
@@ -754,6 +891,11 @@ public class CacheClusterService {
                 return;
             }
 
+            // 保存副本
+            if (incClusterVersion) {
+                backupCacheClusterMeta();
+            }
+
             List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
             for (SubCacheMeta subCache : subCaches) {
                 ReplicationMeta meta = subCache.getReplicationMetas().get(0);
@@ -775,9 +917,13 @@ public class CacheClusterService {
                 increaseClusterVersion();
             }
 
+            if (incClusterVersion) {
+                removeCacheClusterMetaBackup();
+            }
+
         } finally {
             try {
-                unlockAndTryToWaitUntilVersionMatched();
+                unlockCluster();
             } catch (Exception e) {
                 logger.error(String.format("failed to release clusterGlobalLock on zknode[%s]",
                         Constants.CACHE_CLUSTER_PATH), e);
