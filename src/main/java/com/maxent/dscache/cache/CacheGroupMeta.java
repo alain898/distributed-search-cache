@@ -17,8 +17,6 @@ public class CacheGroupMeta {
     private List<CacheMeta> cacheMetas;
 
     private int currentCachesNumber;    // 2^cm
-    private int lastCachesNumber;       // 2^lm
-
 
     public String getCacheGroupName() {
         return cacheGroupName;
@@ -42,14 +40,6 @@ public class CacheGroupMeta {
 
     public void setCurrentCachesNumber(int currentCachesNumber) {
         this.currentCachesNumber = currentCachesNumber;
-    }
-
-    public int getLastCachesNumber() {
-        return lastCachesNumber;
-    }
-
-    public void setLastCachesNumber(int lastCachesNumber) {
-        this.lastCachesNumber = lastCachesNumber;
     }
 
     public int getCacheGroupCapacity() {

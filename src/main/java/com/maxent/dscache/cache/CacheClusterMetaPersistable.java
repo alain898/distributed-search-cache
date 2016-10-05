@@ -248,7 +248,6 @@ public class CacheClusterMetaPersistable {
         private List<CacheMetaPersistable> cacheMetas;
 
         private int currentCachesNumber;    // 2^cm
-        private int lastCachesNumber;       // 2^lm
 
         private static CacheGroupMetaPersistable makePersitable(CacheGroupMeta cacheGroupMeta) {
             if (cacheGroupMeta == null) {
@@ -272,7 +271,6 @@ public class CacheClusterMetaPersistable {
             }
 
             cacheGroupMetaPersistable.currentCachesNumber = cacheGroupMeta.getCurrentCachesNumber();
-            cacheGroupMetaPersistable.lastCachesNumber = cacheGroupMeta.getLastCachesNumber();
 
             return cacheGroupMetaPersistable;
         }
@@ -299,7 +297,6 @@ public class CacheClusterMetaPersistable {
             }
 
             cacheGroupMeta.setCurrentCachesNumber(cacheGroupMetaPersistable.currentCachesNumber);
-            cacheGroupMeta.setLastCachesNumber(cacheGroupMetaPersistable.lastCachesNumber);
 
             return cacheGroupMeta;
         }

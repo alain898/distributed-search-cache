@@ -118,7 +118,7 @@ public class CacheClient {
         return new CacheDeleteResponse(response.getMessage());
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         CacheClusterViewerFactory.configure(ConfigFactory.load());
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheClient cacheClient = new CacheClient(cacheClusterViewer);

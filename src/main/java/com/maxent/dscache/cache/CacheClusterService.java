@@ -710,7 +710,6 @@ public class CacheClusterService {
             cacheGroupMeta.setCacheGroupCapacity(cacheGroupCapacity);
             cacheGroupMeta.setCurrentCachesNumber(cachesNumber);
             cacheGroupMeta.setCacheMetas(cacheMetas);
-            cacheGroupMeta.setLastCachesNumber(-1);
             cacheGroupMeta.setEntryClassName(entryClassName);
             cacheGroupMeta.setSubCachesPerCache(subCachesPerCache);
             cacheGroupMeta.setPartitionsPerSubCache(partitionsPerSubCache);
@@ -758,7 +757,6 @@ public class CacheClusterService {
             cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
             cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
             cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
-            cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getLastCachesNumber());
             cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
             cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
             cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
@@ -797,7 +795,6 @@ public class CacheClusterService {
         cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
         cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
         cacheGroupZnode.setCurrentCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
-        cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
         cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
         cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
         cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());
@@ -830,7 +827,6 @@ public class CacheClusterService {
         cacheGroupZnode.setCacheGroupName(cacheGroupMeta.getCacheGroupName());
         cacheGroupZnode.setCacheGroupCapacity(cacheGroupMeta.getCacheGroupCapacity());
         cacheGroupZnode.setCurrentCachesNumber(allCacheMetas.size());
-        cacheGroupZnode.setLastCachesNumber(cacheGroupMeta.getCurrentCachesNumber());
         cacheGroupZnode.setEntryClassName(cacheGroupMeta.getEntryClassName());
         cacheGroupZnode.setPartitionsPerSubCache(cacheGroupMeta.getPartitionsPerSubCache());
         cacheGroupZnode.setSubCachesPerCache(cacheGroupMeta.getSubCachesPerCache());

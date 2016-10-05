@@ -12,8 +12,6 @@ public class CacheGroupZnode {
     private int blockCapacity;
     private int subCachesPerCache;
     private int currentCachesNumber;    // 2^cm
-    private int lastCachesNumber;       // 2^lm
-
 
 
     public String getCacheGroupName() {
@@ -38,14 +36,6 @@ public class CacheGroupZnode {
 
     public void setCurrentCachesNumber(int currentCachesNumber) {
         this.currentCachesNumber = currentCachesNumber;
-    }
-
-    public int getLastCachesNumber() {
-        return lastCachesNumber;
-    }
-
-    public void setLastCachesNumber(int lastCachesNumber) {
-        this.lastCachesNumber = lastCachesNumber;
     }
 
     public String getEntryClassName() {

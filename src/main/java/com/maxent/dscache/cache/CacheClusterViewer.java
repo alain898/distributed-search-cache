@@ -226,7 +226,6 @@ public class CacheClusterViewer {
             cacheGroupMeta.setBlocksPerPartition(cacheGroupZnode.getBlocksPerPartition());
             cacheGroupMeta.setBlockCapacity(cacheGroupZnode.getBlockCapacity());
             cacheGroupMeta.setCurrentCachesNumber(cacheGroupZnode.getCurrentCachesNumber());
-            cacheGroupMeta.setLastCachesNumber(cacheGroupZnode.getLastCachesNumber());
             cacheGroupMeta.setCacheMetas(cachesInGroup);
             cacheGroupMetas.add(cacheGroupMeta);
         }
