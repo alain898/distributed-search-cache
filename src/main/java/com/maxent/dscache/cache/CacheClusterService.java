@@ -261,6 +261,19 @@ public class CacheClusterService {
         }
     }
 
+    private CacheClusterMetaPersistable restoreCacheClusterMetaFromBackup() throws CacheClusterRestoreFailure {
+        try {
+            String backupPath = StringUtils.join(Constants.CACHE_BACKUP_PATH, "/cache_cluster_meta");
+            if (zkClient.checkExists().forPath(backupPath) == null) {
+                return null;
+            }
+            return JsonUtils.fromJson(new String(zkClient.getData().forPath(backupPath), Charsets.UTF_8),
+                    CacheClusterMetaPersistable.class);
+        } catch (Exception e) {
+            throw new CacheClusterRestoreFailure(e);
+        }
+    }
+
     private void removeCacheClusterMetaBackup() {
         String backupPath = StringUtils.join(Constants.CACHE_BACKUP_PATH, "/cache_cluster_meta");
         try {
@@ -275,7 +288,7 @@ public class CacheClusterService {
                                  int blockCapacity, int blocksPerPartition,
                                  String cacheGroup, String forwardCache,
                                  long forwardThreshold,
-                                 boolean incClusterVersion) throws CacheExistException, Exception {
+                                 boolean outermost) throws CacheExistException, Exception {
         Preconditions.checkArgument(StringUtils.isNotBlank(name), "name is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(entryClassName), "entryClassName is blank");
         Preconditions.checkArgument(Validator.isValidSubCachesNumber(subCaches), "invalid subCaches");
@@ -288,6 +301,10 @@ public class CacheClusterService {
         lockIfVersionMatched();
 
         try {
+            if (outermost) {
+                restoreIfNeeded();
+            }
+
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
@@ -329,7 +346,7 @@ public class CacheClusterService {
             cacheMeta.setPartitionsPerSubCache(partitionsPerSubCache);
 
             // 保存副本
-            if (incClusterVersion) {
+            if (outermost) {
                 backupCacheClusterMeta();
             }
 
@@ -338,7 +355,7 @@ public class CacheClusterService {
                 createCacheInCluster(cacheMeta);
             } catch (CacheCreateFailure e) {
                 deleteCacheInCluster(cacheMeta);
-                if (incClusterVersion) {
+                if (outermost) {
                     removeCacheClusterMetaBackup();
                 }
                 return null;
@@ -350,14 +367,14 @@ public class CacheClusterService {
             } catch (CacheCreateFailure e) {
                 deleteCacheInCluster(cacheMeta);
                 deleteCacheInZookeeper(cacheMeta);
-                if (incClusterVersion) {
+                if (outermost) {
                     removeCacheClusterMetaBackup();
                 }
                 return null;
             }
 
             // 增加版本号
-            if (incClusterVersion) {
+            if (outermost) {
                 try {
                     increaseClusterVersion();
                 } catch (CacheVersionModifyFailure e) {
@@ -368,7 +385,7 @@ public class CacheClusterService {
                 }
             }
 
-            if (incClusterVersion) {
+            if (outermost) {
                 removeCacheClusterMetaBackup();
             }
 
@@ -387,12 +404,12 @@ public class CacheClusterService {
     public CacheMeta createCache(String name, String entryClassName,
                                  int subCaches, int partitionsPerSubCache,
                                  int blockCapacity, int blocksPerPartition,
-                                 boolean incClusterVersion)
+                                 boolean outermost)
             throws CacheExistException, Exception {
         return createCache(name, entryClassName,
                 subCaches, partitionsPerSubCache,
                 blockCapacity, blocksPerPartition,
-                null, null, 100, incClusterVersion);
+                null, null, 100, outermost);
     }
 
     private void lockIfVersionMatched() throws CacheLockException, InterruptedException {
@@ -448,9 +465,14 @@ public class CacheClusterService {
         zkClient.delete().forPath(hostPath);
     }
 
-    public void addHosts(List<Host> newHosts, boolean incClusterVersion) throws CacheHostExistException, Exception {
+    public void addHosts(List<Host> newHosts, boolean outermost)
+            throws CacheHostExistException, Exception {
         lockIfVersionMatched();
         try {
+            if (outermost) {
+                restoreIfNeeded();
+            }
+
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<Host> hosts = cacheClusterMeta.getHosts();
             for (Host newHost : newHosts) {
@@ -461,7 +483,7 @@ public class CacheClusterService {
             }
 
             // 保存副本
-            if (incClusterVersion) {
+            if (outermost) {
                 backupCacheClusterMeta();
             }
 
@@ -486,14 +508,14 @@ public class CacheClusterService {
                 for (Host host : succeed) {
                     deleteHostInZookeeper(host);
                 }
-                if (incClusterVersion) {
+                if (outermost) {
                     removeCacheClusterMetaBackup();
                 }
                 return;
             }
 
             // 增加版本号
-            if (incClusterVersion) {
+            if (outermost) {
                 try {
                     increaseClusterVersion();
                 } catch (CacheVersionModifyFailure e) {
@@ -505,7 +527,7 @@ public class CacheClusterService {
                 }
             }
 
-            if (incClusterVersion) {
+            if (outermost) {
                 removeCacheClusterMetaBackup();
             }
         } finally {
@@ -522,6 +544,7 @@ public class CacheClusterService {
                                  int addedCaches) throws Exception {
         lockIfVersionMatched();
         try {
+            restoreIfNeeded();
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             CacheGroupMeta cacheGroupMeta = null;
@@ -630,6 +653,7 @@ public class CacheClusterService {
                                  int blockCapacity) throws Exception {
         lockIfVersionMatched();
         try {
+            restoreIfNeeded();
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             for (CacheGroupMeta cacheGroup : cacheGroups) {
@@ -851,6 +875,7 @@ public class CacheClusterService {
     public void deleteCacheGroup(String cacheGroupName) throws Exception {
         lockIfVersionMatched();
         try {
+            restoreIfNeeded();
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheGroupMeta> cacheGroups = cacheClusterMeta.getCacheGroups();
             CacheGroupMeta cacheGroupMeta = null;
@@ -909,9 +934,12 @@ public class CacheClusterService {
     }
 
     public void deleteCache(String cacheName,
-                            boolean incClusterVersion) throws Exception {
+                            boolean outermost) throws Exception {
         lockIfVersionMatched();
         try {
+            if (outermost) {
+                restoreIfNeeded();
+            }
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
             CacheMeta cacheMeta = null;
@@ -927,18 +955,18 @@ public class CacheClusterService {
             }
 
             // 保存副本
-            if (incClusterVersion) {
+            if (outermost) {
                 backupCacheClusterMeta();
             }
 
             doDeleteCache(cacheMeta);
 
             // 增加版本号
-            if (incClusterVersion) {
+            if (outermost) {
                 increaseClusterVersion();
             }
 
-            if (incClusterVersion) {
+            if (outermost) {
                 removeCacheClusterMetaBackup();
             }
 
@@ -953,7 +981,8 @@ public class CacheClusterService {
     }
 
     public void restoreCacheCluster(CacheClusterMeta current,
-                                    CacheClusterMeta backup) throws Exception {
+                                    CacheClusterMeta backup)
+            throws CacheClusterRestoreFailure, InterruptedException {
         int currentVersion = Integer.getInteger(current.getVersion());
         int backupVersion = Integer.getInteger(backup.getVersion());
 
@@ -985,7 +1014,7 @@ public class CacheClusterService {
 
     private void doRestoreCacheCluster(CacheClusterMeta current,
                                        CacheClusterMeta backup)
-            throws CacheClusterRestoreFailure, CacheLockException, InterruptedException {
+            throws CacheClusterRestoreFailure, InterruptedException {
         List<Host> currentHosts = current.getHosts();
         List<Host> backupHosts = backup.getHosts();
         Comparator<Host> hostComparator = Comparator.
@@ -1079,9 +1108,26 @@ public class CacheClusterService {
 
         removeCacheClusterMetaBackup();
 
-        unlockCluster();
+        try {
+            unlockCluster();
+        } catch (CacheLockException e) {
+            throw new CacheClusterRestoreFailure("unlockCluster failed", e);
+        }
 
-        lockIfVersionMatched();
+        try {
+            lockIfVersionMatched();
+        } catch (CacheLockException e) {
+            throw new CacheClusterRestoreFailure("lockIfVersionMatched failed", e);
+        }
+    }
+
+    private void restoreIfNeeded() throws CacheClusterRestoreFailure, InterruptedException {
+        CacheClusterMetaPersistable cacheClusterMetaPersistable = restoreCacheClusterMetaFromBackup();
+        if (cacheClusterMetaPersistable != null) {
+            CacheClusterMeta cacheClusterMeta =
+                    CacheClusterMetaPersistable.fromPersitable(cacheClusterMetaPersistable);
+            restoreCacheCluster(cacheClusterViewer.getCacheClusterMeta(), cacheClusterMeta);
+        }
     }
 }
 
