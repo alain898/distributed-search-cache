@@ -23,10 +23,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by alain on 16/8/20.
@@ -250,11 +247,27 @@ public class CacheClusterService {
     }
 
     private void backupCacheClusterMeta() throws CacheClusterMetaBackupFailure {
+        try {
+            CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
+            CacheClusterMetaPersistable cacheClusterMetaPersistable =
+                    CacheClusterMetaPersistable.makePersitable(cacheClusterMeta);
+            String backupPath = StringUtils.join(Constants.CACHE_BACKUP_PATH, "/cache_cluster_meta");
 
+            zkClient.create().forPath(backupPath);
+            zkClient.setData().forPath(backupPath,
+                    JsonUtils.toJson(cacheClusterMetaPersistable).getBytes(Charsets.UTF_8));
+        } catch (Exception e) {
+            throw new CacheClusterMetaBackupFailure(e);
+        }
     }
 
     private void removeCacheClusterMetaBackup() {
-
+        String backupPath = StringUtils.join(Constants.CACHE_BACKUP_PATH, "/cache_cluster_meta");
+        try {
+            zkClient.delete().forPath(backupPath);
+        } catch (Exception e) {
+            logger.warn(String.format("failed to removeCacheClusterMetaBackup for path[%s]", backupPath));
+        }
     }
 
     public CacheMeta createCache(String name, String entryClassName,
@@ -776,6 +789,10 @@ public class CacheClusterService {
             String cacheZkPath = StringUtils.join(cacheGroupZkPath, "/", cacheMeta.getName());
             zkClient.delete().forPath(cacheZkPath);
         }
+
+        if (zkClient.getChildren().forPath(cacheGroupZkPath).size() == 0) {
+            zkClient.delete().forPath(cacheGroupZkPath);
+        }
     }
 
     private void addCacheInCacheGroup(CacheGroupMeta cacheGroupMeta, List<CacheMeta> newCacheMetas)
@@ -872,10 +889,28 @@ public class CacheClusterService {
         deleteCache(cacheName, true);
     }
 
+    private void doDeleteCache(CacheMeta cacheMeta) throws Exception {
+        HttpClient httpClient = new HttpClient();
+        List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
+        for (SubCacheMeta subCache : subCaches) {
+            ReplicationMeta meta = subCache.getReplicationMetas().get(0);
+            Host host = meta.getHost();
+            String url = String.format("http://%s:%d", host.getHost(), host.getPort());
+            String path = "/subcache/delete";
+            RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
+            restDeleteSubCacheRequest.setName(cacheMeta.getName());
+            restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
+            httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
+        }
+
+        String name = cacheMeta.getName();
+        String cacheZkPath = StringUtils.join(Constants.CACHES_PATH, "/", name);
+        zkClient.delete().deletingChildrenIfNeeded().forPath(cacheZkPath);
+    }
+
     public void deleteCache(String cacheName,
                             boolean incClusterVersion) throws Exception {
         lockIfVersionMatched();
-        HttpClient httpClient = new HttpClient();
         try {
             CacheClusterMeta cacheClusterMeta = cacheClusterViewer.getCacheClusterMeta();
             List<CacheMeta> caches = cacheClusterMeta.getCaches();
@@ -896,21 +931,7 @@ public class CacheClusterService {
                 backupCacheClusterMeta();
             }
 
-            List<SubCacheMeta> subCaches = cacheMeta.getSubCacheMetas();
-            for (SubCacheMeta subCache : subCaches) {
-                ReplicationMeta meta = subCache.getReplicationMetas().get(0);
-                Host host = meta.getHost();
-                String url = String.format("http://%s:%d", host.getHost(), host.getPort());
-                String path = "/subcache/delete";
-                RestDeleteSubCacheRequest restDeleteSubCacheRequest = new RestDeleteSubCacheRequest();
-                restDeleteSubCacheRequest.setName(cacheMeta.getName());
-                restDeleteSubCacheRequest.setSubCacheId(String.valueOf(subCache.getId()));
-                httpClient.post(url, path, restDeleteSubCacheRequest, RestDeleteSubCacheResponse.class);
-            }
-
-            String name = cacheMeta.getName();
-            String cacheZkPath = StringUtils.join(Constants.CACHES_PATH, "/", name);
-            zkClient.delete().deletingChildrenIfNeeded().forPath(cacheZkPath);
+            doDeleteCache(cacheMeta);
 
             // 增加版本号
             if (incClusterVersion) {
@@ -929,6 +950,138 @@ public class CacheClusterService {
                         Constants.CACHE_CLUSTER_PATH), e);
             }
         }
+    }
+
+    public void restoreCacheCluster(CacheClusterMeta current,
+                                    CacheClusterMeta backup) throws Exception {
+        int currentVersion = Integer.getInteger(current.getVersion());
+        int backupVersion = Integer.getInteger(backup.getVersion());
+
+        Preconditions.checkArgument(currentVersion >= backupVersion,
+                String.format("currentVersion[%d] mustn't be less than backupVersion[%d]",
+                        currentVersion, backupVersion));
+
+        if (currentVersion > backupVersion) {
+            removeCacheClusterMetaBackup();
+        } else if (currentVersion == backupVersion) {
+            doRestoreCacheCluster(current, backup);
+        } else {
+            logger.error("can not arrive here");
+        }
+    }
+
+    private <T> boolean containedInList(List<T> objects, T target, Comparator<T> comparator) {
+        Preconditions.checkNotNull(objects, "objects is null");
+        Preconditions.checkNotNull(target, "target is null");
+        Preconditions.checkNotNull(comparator, "comparator is null");
+
+        for (T obj : objects) {
+            if (comparator.compare(obj, target) == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void doRestoreCacheCluster(CacheClusterMeta current,
+                                       CacheClusterMeta backup)
+            throws CacheClusterRestoreFailure, CacheLockException, InterruptedException {
+        List<Host> currentHosts = current.getHosts();
+        List<Host> backupHosts = backup.getHosts();
+        Comparator<Host> hostComparator = Comparator.
+                comparing(Host::getId).
+                thenComparing(Host::getHost).
+                thenComparing(Host::getPort);
+        // delete created host
+        for (Host host : currentHosts) {
+            if (!containedInList(backupHosts, host, hostComparator)) {
+                try {
+                    deleteHostInZookeeper(host);
+                } catch (KeeperException.NoNodeException e) {
+                    logger.warn(String.format("host[%s] not exist", JsonUtils.toJson(host)));
+                } catch (Exception e) {
+                    throw new CacheClusterRestoreFailure(
+                            String.format("unexpected exception when delete host[%s]",
+                                    JsonUtils.toJson(host)), e);
+                }
+            }
+        }
+
+        List<CacheMeta> currentCaches = current.getCaches();
+        List<CacheMeta> backupCaches = backup.getCaches();
+        Comparator<CacheMeta> cacheMetaComparator = Comparator.comparing(CacheMeta::getName);
+        // delete created CacheMeta
+        String cacheGroupName = null;
+        for (CacheMeta cacheMeta : currentCaches) {
+            if (!containedInList(backupCaches, cacheMeta, cacheMetaComparator)) {
+                try {
+                    doDeleteCache(cacheMeta);
+                    cacheGroupName = cacheMeta.getName();
+                } catch (KeeperException.NoNodeException e) {
+                    logger.warn(String.format("cacheMeta[%s] not exist", cacheMeta.getName()));
+                } catch (Exception e) {
+                    throw new CacheClusterRestoreFailure(
+                            String.format("unexpected exception when delete cacheMeta[%s]",
+                                    cacheMeta.getName()), e);
+                }
+            }
+        }
+
+        // delete created CacheMeta
+        CacheGroupMeta cacheGroupMeta = null;
+        if (cacheGroupName != null) {
+            for (CacheGroupMeta meta : backup.getCacheGroups()) {
+                if (meta.getCacheGroupName().equals(cacheGroupName)) {
+                    cacheGroupMeta = meta;
+                    break;
+                }
+            }
+        }
+        if (cacheGroupMeta != null) {
+            int cachesNumber = cacheGroupMeta.getCurrentCachesNumber();
+            List<CacheMeta> created = new ArrayList<>();
+            for (int i = 0; i < currentCaches.size(); i++) {
+                String cacheName = String.format("%s_cache_%s", cacheGroupName, genIndexString(cachesNumber + i));
+                CacheMeta cacheMeta = null;
+                for (CacheMeta cache : currentCaches) {
+                    if (cache.getName().equals(cacheName)) {
+                        cacheMeta = cache;
+                        break;
+                    }
+                }
+                if (cacheMeta != null) {
+                    try {
+                        doDeleteCache(cacheMeta);
+                        created.add(cacheMeta);
+                    } catch (KeeperException.NoNodeException e) {
+                        logger.warn(String.format("cacheMeta[%s] not exist", cacheMeta.getName()));
+                    } catch (Exception e) {
+                        throw new CacheClusterRestoreFailure(
+                                String.format("unexpected exception when delete cacheMeta[%s]",
+                                        cacheMeta.getName()), e);
+                    }
+                }
+            }
+            try {
+                deleteCacheInCacheGroup(cacheGroupMeta, created);
+            } catch (Exception e) {
+                throw new CacheClusterRestoreFailure(
+                        String.format("unexpected exception when delete cacheGroupMeta[%s]",
+                                cacheGroupMeta.getCacheGroupName()), e);
+            }
+        }
+
+        try {
+            increaseClusterVersion();
+        } catch (CacheVersionModifyFailure e) {
+            throw new CacheClusterRestoreFailure("increaseClusterVersion failed", e);
+        }
+
+        removeCacheClusterMetaBackup();
+
+        unlockCluster();
+
+        lockIfVersionMatched();
     }
 }
 
