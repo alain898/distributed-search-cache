@@ -42,7 +42,7 @@ public class SubCacheService {
         return subCacheService;
     }
 
-    public SubCacheService(Config config) {
+    private SubCacheService(Config config) {
         try {
             if (config == null) {
                 config = ConfigFactory.load();
