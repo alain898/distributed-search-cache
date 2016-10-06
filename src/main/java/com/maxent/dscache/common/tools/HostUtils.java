@@ -24,7 +24,7 @@ public class HostUtils {
             } else if (splits.length == 2) {
                 hostList.add(new Host(splits[0], Integer.parseInt(splits[1])));
             } else {
-                throw new InvalidHostException("");
+                throw new InvalidHostException(String.format("invalid host[%s]", host));
             }
         }
         return hostList;
