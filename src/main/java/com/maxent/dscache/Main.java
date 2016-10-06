@@ -1,6 +1,7 @@
 package com.maxent.dscache;
 
 import com.maxent.dscache.cache.*;
+import com.maxent.dscache.cache.exceptions.CacheHostExistException;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.commons.daemon.Daemon;
@@ -9,6 +10,8 @@ import org.apache.commons.daemon.DaemonInitException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
 
 
 /**
@@ -24,6 +27,16 @@ public class Main implements Daemon {
     public void init(DaemonContext context) throws DaemonInitException, Exception {
 
 
+    }
+
+    private void postApiServerStart(Config config) throws Exception {
+        String host = config.getString("server.ip");
+        int port = config.getInt("server.port");
+        try {
+            CacheClusterService.getInstance().addHosts(Arrays.asList(new Host(host, port)), true);
+        } catch (CacheHostExistException e) {
+            logger.info(String.format("host[%s:%d] already exist", host, port));
+        }
     }
 
     @Override
@@ -49,6 +62,8 @@ public class Main implements Daemon {
             // start api server
             apiServer = new ApiServer(config);
             apiServer.start();
+
+            postApiServerStart(config);
 
             logger.info("start server successfully.");
         } catch (Exception e) {
