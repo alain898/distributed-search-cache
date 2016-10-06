@@ -1,5 +1,6 @@
 package com.maxent.dscache.common.tools;
 
+import com.google.common.base.Preconditions;
 import com.maxent.dscache.cache.Host;
 import com.maxent.dscache.cache.exceptions.InvalidHostException;
 
@@ -13,6 +14,8 @@ public class HostUtils {
     public static int DEFAULT_SERVICE_PORT = 5232;
 
     public static List<Host> parseHosts(List<String> hosts) {
+        Preconditions.checkNotNull(hosts, "hosts is null");
+
         List<Host> hostList = new ArrayList<>();
         for (String host : hosts) {
             String[] splits = host.split(":");
