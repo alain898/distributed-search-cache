@@ -264,6 +264,9 @@ public class CacheClusterViewer {
     }
 
     public CacheGroupMeta getCacheGroupMeta(String name) {
+        if (name == null) {
+            return null;
+        }
         return getCacheGroupMeta(cacheCluster, name);
     }
 

@@ -31,7 +31,7 @@ public class Validator {
     }
 
     public static boolean isValidCacheGroup(String cacheGroup) {
-        return StringUtils.isNotBlank(cacheGroup);
+        return cacheGroup == null || StringUtils.isNotBlank(cacheGroup);
     }
 
     public static boolean isValidForwardThreshold(long forwardThreshold) {

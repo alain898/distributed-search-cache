@@ -4,6 +4,7 @@ import com.maxent.dscache.api.rest.request.*;
 import com.maxent.dscache.api.rest.response.*;
 import com.maxent.dscache.api.rest.tools.RestHelper;
 import com.maxent.dscache.cache.CacheClusterService;
+import com.maxent.dscache.cache.CacheMeta;
 import com.maxent.dscache.cache.Host;
 import com.maxent.dscache.common.tools.HostUtils;
 import org.slf4j.Logger;
@@ -57,7 +58,7 @@ public class ManagementController {
                                                final RestCreateCacheRequest request) {
 
         try {
-            cacheClusterService.createCache(
+            CacheMeta cacheMeta = cacheClusterService.createCache(
                     request.getName(),
                     request.getEntryClassName(),
                     request.getSubCaches(),
@@ -66,7 +67,12 @@ public class ManagementController {
                     request.getBlockCapacity(),
                     true);
             RestCreateCacheResponse response = new RestCreateCacheResponse();
-            response.setName(request.getName());
+            response.setName(cacheMeta.getName());
+            response.setEntryClassName(cacheMeta.getEntryClassName());
+            response.setSubCaches(cacheMeta.getSubCacheMetas().size());
+            response.setPartitionsPerSubCache(cacheMeta.getPartitionsPerSubCache());
+            response.setBlocksPerPartition(cacheMeta.getBlocksPerPartition());
+            response.setBlockCapacity(cacheMeta.getBlockCapacity());
             return response;
         } catch (Exception e) {
             logger.error("createCache failed", e);
