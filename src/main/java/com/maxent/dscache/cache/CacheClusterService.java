@@ -448,7 +448,7 @@ public class CacheClusterService {
         try {
             String hostPath = StringUtils.join(
                     Constants.HOSTS_PATH, "/",
-                    String.format("%s_%s", Constants.HOST_PATH_PREFIX, genIndexString(host.getId())));
+                    String.format("%s%s", Constants.HOST_PATH_PREFIX, genIndexString(host.getId())));
             zkClient.create().forPath(hostPath);
             zkClient.setData().forPath(hostPath, JsonUtils.toJson(host).getBytes(Charsets.UTF_8));
         } catch (KeeperException.NodeExistsException e) {
@@ -461,7 +461,7 @@ public class CacheClusterService {
     private void deleteHostInZookeeper(Host host) throws Exception {
         String hostPath = StringUtils.join(
                 Constants.HOSTS_PATH, "/",
-                String.format("%s_%s", Constants.HOST_PATH_PREFIX, genIndexString(host.getId())));
+                String.format("%s%s", Constants.HOST_PATH_PREFIX, genIndexString(host.getId())));
         zkClient.delete().forPath(hostPath);
     }
 
