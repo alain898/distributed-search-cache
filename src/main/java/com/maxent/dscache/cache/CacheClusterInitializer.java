@@ -69,6 +69,12 @@ public class CacheClusterInitializer {
             } catch (KeeperException.NodeExistsException e) {
                 logger.info(String.format("zookeeper node[%s] exist", Constants.CACHE_GROUPS_PATH));
             }
+
+            try {
+                zkClient.create().forPath(Constants.CACHE_BACKUP_PATH);
+            } catch (KeeperException.NodeExistsException e) {
+                logger.info(String.format("zookeeper node[%s] exist", Constants.CACHE_GROUPS_PATH));
+            }
             zkClient.close();
         } catch (Exception e) {
             throw new CacheInitializeFailure("failed to check cluster", e);
