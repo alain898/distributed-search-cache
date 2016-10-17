@@ -47,7 +47,7 @@ public class CacheClient {
         restCacheSearchRequest.setSubCacheId(String.valueOf(subCacheId));
         restCacheSearchRequest.setQueryEntry(JsonUtils.toMap(entry));
         restCacheSearchRequest.setSearchMode(SearchMode.MATCH_GROUP.toString());
-        restCacheSearchRequest.setSearchPolicy(SearchPolicy.MATCH_FIRST.toString());
+        restCacheSearchRequest.setSearchPolicy(SearchPolicy.MATCH_BEST.toString());
         RestSubCacheSearchResponse restCacheSearchResponse =
                 httpClient.post(url, path, restCacheSearchRequest, RestSubCacheSearchResponse.class);
         return new CacheSearchResponse(

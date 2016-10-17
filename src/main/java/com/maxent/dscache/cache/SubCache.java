@@ -164,9 +164,11 @@ public class SubCache<E extends ICacheEntry> {
         if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
             String forwardCacheName = cacheMeta.getForwardCache();
             CacheMeta forwardCache = cacheClusterViewer.getCache(forwardCacheName);
-            CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
-            if (CollectionUtils.isNotEmpty(response.getEntries())) {
-                return Lists.newArrayList(Pair.of((E) response.getEntries().get(0), response.getScores().get(0)));
+            if (forwardCache != null) {
+                CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
+                if (CollectionUtils.isNotEmpty(response.getEntries())) {
+                    return Lists.newArrayList(Pair.of((E) response.getEntries().get(0), response.getScores().get(0)));
+                }
             }
         }
         return null;
@@ -193,10 +195,12 @@ public class SubCache<E extends ICacheEntry> {
         if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
             String forwardCacheName = cacheMeta.getForwardCache();
             CacheMeta forwardCache = cacheClusterViewer.getCache(forwardCacheName);
-            CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
-            if (CollectionUtils.isNotEmpty(response.getEntries())) {
-                results.addAll(Lists.newArrayList(
-                        Pair.of((E) response.getEntries().get(0), response.getScores().get(0))));
+            if (forwardCache != null) {
+                CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
+                if (CollectionUtils.isNotEmpty(response.getEntries())) {
+                    results.addAll(Lists.newArrayList(
+                            Pair.of((E) response.getEntries().get(0), response.getScores().get(0))));
+                }
             }
         }
         if (CollectionUtils.isEmpty(results)) {
@@ -228,11 +232,13 @@ public class SubCache<E extends ICacheEntry> {
         if (usedPercent < cacheMeta.getForwardThreshold() && SearchMode.MATCH_GROUP.equals(searchMode)) {
             String forwardCacheName = cacheMeta.getForwardCache();
             CacheMeta forwardCache = cacheClusterViewer.getCache(forwardCacheName);
-            CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
-            if (CollectionUtils.isNotEmpty(response.getEntries())) {
-                if (response.getScores().get(0) > maxScore) {
-                    maxScore = response.getScores().get(0);
-                    maxScoreEntry = (E) response.getEntries().get(0);
+            if (forwardCache != null) {
+                CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
+                if (CollectionUtils.isNotEmpty(response.getEntries())) {
+                    if (response.getScores().get(0) > maxScore) {
+                        maxScore = response.getScores().get(0);
+                        maxScoreEntry = (E) response.getEntries().get(0);
+                    }
                 }
             }
         }

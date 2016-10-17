@@ -150,7 +150,7 @@ public class SubCacheController {
             return response;
         } catch (Exception e) {
             String errInfo = String.format(
-                    "failed to create cache[%s], exception[%s]",
+                    "failed to search cache[%s], exception[%s]",
                     request.getCacheName(), e.getMessage());
             logger.error(errInfo, e);
             return RestHelper.createErrorResponse(RestSubCacheSearchResponse.class, errInfo);

@@ -3,10 +3,7 @@ package com.maxent.dscache.cache.client;
 import com.maxent.dscache.cache.CacheClusterViewer;
 import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
-import com.maxent.dscache.cache.client.response.CacheGroupDeleteResponse;
-import com.maxent.dscache.cache.client.response.CacheGroupUpdateResponse;
-import com.maxent.dscache.cache.client.response.CacheSaveResponse;
-import com.maxent.dscache.cache.client.response.CacheSearchResponse;
+import com.maxent.dscache.cache.client.response.*;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
@@ -21,6 +18,25 @@ public class CacheGroupClientTest {
     @Before
     public void setUp() throws Exception {
         CacheClusterViewerFactory.configure(ConfigFactory.load());
+    }
+
+    @Test
+    public void create() throws Exception {
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
+        CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
+        String cacheGroupName = "cache_group_test1";
+        String entryClassName = "com.maxent.dscache.cache.TestCacheEntry";
+        int cacheGroupCapacity = 256;
+        int cachesNumber = 4;
+        int subCachesPerCache = 2;
+        int partitionsPerSubCache = 16;
+        int blockCapacity = 100;
+        int blocksPerPartition = 10;
+        CreateCacheGroupResponse response = cacheGroupClient.create(
+                cacheGroupName, entryClassName, cacheGroupCapacity,
+                cachesNumber, subCachesPerCache, partitionsPerSubCache,
+                blockCapacity, blocksPerPartition);
+        System.out.println(JsonUtils.toJson(response));
     }
 
     @Test
@@ -53,10 +69,6 @@ public class CacheGroupClientTest {
         System.out.println(JsonUtils.toJson(response));
     }
 
-    @Test
-    public void create() throws Exception {
-
-    }
 
     @Test
     public void delete() throws Exception {

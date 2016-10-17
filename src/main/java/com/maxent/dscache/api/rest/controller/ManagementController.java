@@ -44,9 +44,9 @@ public class ManagementController {
             response.setResult("success");
             return response;
         } catch (Exception e) {
-            logger.error("createCache failed", e);
+            logger.error("addHosts failed", e);
             return RestHelper.createErrorResponse(RestAddHostsResponse.class,
-                    "createCache failed: " + e.getMessage());
+                    "addHosts failed: " + e.getMessage());
         }
     }
 
@@ -93,7 +93,7 @@ public class ManagementController {
             response.setMessage("success");
             return response;
         } catch (Exception e) {
-            logger.error("createCache failed", e);
+            logger.error("deleteCache failed", e);
             return RestHelper.createErrorResponse(RestDeleteCacheResponse.class, "createCache failed");
         }
     }
@@ -119,7 +119,7 @@ public class ManagementController {
             response.setMessage("success");
             return response;
         } catch (Exception e) {
-            logger.error("createCache failed", e);
+            logger.error("createCacheGroup failed", e);
             return RestHelper.createErrorResponse(RestCreateCacheGroupResponse.class, "create cache group failed");
         }
     }
@@ -139,7 +139,7 @@ public class ManagementController {
             response.setMessage("success");
             return response;
         } catch (Exception e) {
-            logger.error("updateCache failed", e);
+            logger.error("updateCacheGroup failed", e);
             return RestHelper.createErrorResponse(RestUpdateCacheGroupResponse.class, "add cache failed");
         }
     }
@@ -157,7 +157,7 @@ public class ManagementController {
             response.setMessage("success");
             return response;
         } catch (Exception e) {
-            logger.error("createCache failed", e);
+            logger.error("deleteCacheGroup failed", e);
             return RestHelper.createErrorResponse(RestDeleteCacheGroupResponse.class, "add cache failed");
         }
     }

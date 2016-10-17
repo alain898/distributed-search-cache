@@ -3,15 +3,51 @@ package com.maxent.dscache.cache.client;
 import com.maxent.dscache.cache.CacheClusterViewer;
 import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
+import com.maxent.dscache.cache.client.response.CacheCreateResponse;
+import com.maxent.dscache.cache.client.response.CacheSaveResponse;
 import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.ConfigFactory;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Created by alain on 16/9/2.
  */
 public class CacheClientTest {
+
+    @Before
+    public void setUp() throws Exception {
+        CacheClusterViewerFactory.configure(ConfigFactory.load());
+    }
+
+    @Test
+    public void create() throws Exception {
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
+        CacheClient cacheClient = new CacheClient(cacheClusterViewer);
+        String name = "cache-test1";
+        String entryClassName = "com.maxent.dscache.cache.TestCacheEntry";
+        int subCaches = 4;
+        int partitionsPerSubCache = 100;
+        int blockCapacity = 10;
+        int blocksPerPartition = 100;
+        CacheCreateResponse response = cacheClient.create(name, entryClassName,
+                subCaches, partitionsPerSubCache,
+                blockCapacity, blocksPerPartition);
+        System.out.println(JsonUtils.toJson(response));
+    }
+
+    @Test
+    public void save() throws Exception {
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
+        CacheClient cacheClient = new CacheClient(cacheClusterViewer);
+        TestCacheEntry testCacheEntry = new TestCacheEntry();
+        testCacheEntry.setField1("field1");
+        testCacheEntry.setField2("field2");
+        CacheSaveResponse response = cacheClient.save("cache-test1", testCacheEntry);
+        System.out.println(JsonUtils.toJson(response));
+    }
+
     @Test
     public void search() throws Exception {
         CacheClusterViewerFactory.configure(ConfigFactory.load());
