@@ -36,6 +36,7 @@ public class CacheClientTest {
                 subCaches, partitionsPerSubCache,
                 blockCapacity, blocksPerPartition);
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
     @Test
@@ -47,6 +48,7 @@ public class CacheClientTest {
         testCacheEntry.setField2("field2");
         CacheSaveResponse response = cacheClient.save("cache-test1", testCacheEntry);
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
     @Test
@@ -59,6 +61,7 @@ public class CacheClientTest {
         testCacheEntry.setField2("field2");
         CacheSearchResponse response = cacheClient.search("cache-test1", testCacheEntry);
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
     @Test
@@ -67,6 +70,7 @@ public class CacheClientTest {
         CacheClient cacheClient = new CacheClient(cacheClusterViewer);
         CacheDeleteResponse response = cacheClient.delete("cache-test1");
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
 }

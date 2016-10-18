@@ -14,6 +14,7 @@ import com.maxent.dscache.common.persist.Flusher;
 import com.maxent.dscache.common.persist.PersistUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.io.input.ReversedLinesFileReader;
@@ -167,7 +168,9 @@ public class SubCache<E extends ICacheEntry> {
             if (forwardCache != null) {
                 CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
                 if (CollectionUtils.isNotEmpty(response.getEntries())) {
-                    return Lists.newArrayList(Pair.of((E) response.getEntries().get(0), response.getScores().get(0)));
+                    return Lists.newArrayList(Pair.of(
+                            (E) JsonUtils.fromMap(response.getEntries().get(0), query.getClass()),
+                            response.getScores().get(0)));
                 }
             }
         }
@@ -198,8 +201,9 @@ public class SubCache<E extends ICacheEntry> {
             if (forwardCache != null) {
                 CacheSearchResponse response = cacheClient.search(forwardCache.getName(), query);
                 if (CollectionUtils.isNotEmpty(response.getEntries())) {
-                    results.addAll(Lists.newArrayList(
-                            Pair.of((E) response.getEntries().get(0), response.getScores().get(0))));
+                    results.addAll(Lists.newArrayList(Pair.of(
+                            (E) JsonUtils.fromMap(response.getEntries().get(0), query.getClass()),
+                            response.getScores().get(0))));
                 }
             }
         }
@@ -237,7 +241,7 @@ public class SubCache<E extends ICacheEntry> {
                 if (CollectionUtils.isNotEmpty(response.getEntries())) {
                     if (response.getScores().get(0) > maxScore) {
                         maxScore = response.getScores().get(0);
-                        maxScoreEntry = (E) response.getEntries().get(0);
+                        maxScoreEntry = (E) JsonUtils.fromMap(response.getEntries().get(0), query.getClass());
                     }
                 }
             }

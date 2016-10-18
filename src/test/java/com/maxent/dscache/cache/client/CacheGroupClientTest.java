@@ -40,21 +40,11 @@ public class CacheGroupClientTest {
                 cachesNumber, subCachesPerCache, partitionsPerSubCache,
                 blockCapacity, blocksPerPartition);
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
     @Test
-    public void test002_search() throws Exception {
-        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
-        CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
-        TestCacheEntry testCacheEntry = new TestCacheEntry();
-        testCacheEntry.setField1("field1");
-        testCacheEntry.setField2("field2");
-        CacheSearchResponse response = cacheGroupClient.search("cache_group_test1", testCacheEntry);
-        System.out.println(JsonUtils.toJson(response));
-    }
-
-    @Test
-    public void test003_save() throws Exception {
+    public void test002_save() throws Exception {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
@@ -62,6 +52,19 @@ public class CacheGroupClientTest {
         testCacheEntry.setField2("field2");
         CacheSaveResponse response = cacheGroupClient.save("cache_group_test1", testCacheEntry);
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
+    }
+
+    @Test
+    public void test003_search() throws Exception {
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
+        CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
+        TestCacheEntry testCacheEntry = new TestCacheEntry();
+        testCacheEntry.setField1("field1");
+        testCacheEntry.setField2("field2");
+        CacheSearchResponse response = cacheGroupClient.search("cache_group_test1", testCacheEntry);
+        System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
     @Test
@@ -70,15 +73,28 @@ public class CacheGroupClientTest {
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         CacheGroupUpdateResponse response = cacheGroupClient.update("cache_group_test1", 4);
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
+    @Test
+    public void test005_search() throws Exception {
+        CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
+        CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
+        TestCacheEntry testCacheEntry = new TestCacheEntry();
+        testCacheEntry.setField1("field1");
+        testCacheEntry.setField2("field2");
+        CacheSearchResponse response = cacheGroupClient.search("cache_group_test1", testCacheEntry);
+        System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
+    }
 
     @Test
-    public void test005_delete() throws Exception {
+    public void test006_delete() throws Exception {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         CacheGroupDeleteResponse response = cacheGroupClient.delete("cache_group_test1");
         System.out.println(JsonUtils.toJson(response));
+        Thread.sleep(2000);
     }
 
 }
