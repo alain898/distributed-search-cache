@@ -6,6 +6,7 @@ import com.maxent.dscache.cache.TestCacheEntry;
 import com.maxent.dscache.cache.client.response.*;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.ConfigFactory;
+import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -39,7 +40,9 @@ public class CacheGroupClientTest {
                 cacheGroupName, entryClassName, cacheGroupCapacity,
                 cachesNumber, subCachesPerCache, partitionsPerSubCache,
                 blockCapacity, blocksPerPartition);
-        System.out.println(JsonUtils.toJson(response));
+        String result = JsonUtils.toJson(response);
+        System.out.println(result);
+        TestCase.assertEquals("{\"message\":\"success\"}", result);
         Thread.sleep(2000);
     }
 
@@ -51,7 +54,9 @@ public class CacheGroupClientTest {
         testCacheEntry.setField1("field1");
         testCacheEntry.setField2("field2");
         CacheSaveResponse response = cacheGroupClient.save("cache_group_test1", testCacheEntry);
-        System.out.println(JsonUtils.toJson(response));
+        String result = JsonUtils.toJson(response);
+        System.out.println(result);
+        TestCase.assertEquals("{\"message\":\"success\"}", result);
         Thread.sleep(2000);
     }
 
@@ -63,7 +68,9 @@ public class CacheGroupClientTest {
         testCacheEntry.setField1("field1");
         testCacheEntry.setField2("field2");
         CacheSearchResponse response = cacheGroupClient.search("cache_group_test1", testCacheEntry);
-        System.out.println(JsonUtils.toJson(response));
+        String result = JsonUtils.toJson(response);
+        System.out.println(result);
+        TestCase.assertEquals("{\"scores\":[1.0],\"entries\":[{\"field1\":\"field1\",\"field2\":\"field2\"}]}", result);
         Thread.sleep(2000);
     }
 
@@ -72,7 +79,9 @@ public class CacheGroupClientTest {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         CacheGroupUpdateResponse response = cacheGroupClient.update("cache_group_test1", 4);
-        System.out.println(JsonUtils.toJson(response));
+        String result = JsonUtils.toJson(response);
+        System.out.println(result);
+        TestCase.assertEquals("{\"message\":\"success\"}", result);
         Thread.sleep(2000);
     }
 
@@ -84,7 +93,9 @@ public class CacheGroupClientTest {
         testCacheEntry.setField1("field1");
         testCacheEntry.setField2("field2");
         CacheSearchResponse response = cacheGroupClient.search("cache_group_test1", testCacheEntry);
-        System.out.println(JsonUtils.toJson(response));
+        String result = JsonUtils.toJson(response);
+        System.out.println(result);
+        TestCase.assertEquals("{\"scores\":[1.0],\"entries\":[{\"field1\":\"field1\",\"field2\":\"field2\"}]}", result);
         Thread.sleep(2000);
     }
 
@@ -93,7 +104,9 @@ public class CacheGroupClientTest {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         CacheGroupDeleteResponse response = cacheGroupClient.delete("cache_group_test1");
-        System.out.println(JsonUtils.toJson(response));
+        String result = JsonUtils.toJson(response);
+        System.out.println(result);
+        TestCase.assertEquals("{\"message\":\"success\"}", result);
         Thread.sleep(2000);
     }
 
