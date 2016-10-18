@@ -7,13 +7,16 @@ import com.maxent.dscache.cache.client.response.*;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 import static org.junit.Assert.*;
 
 /**
  * Created by alain on 16/9/16.
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CacheGroupClientTest {
     @Before
     public void setUp() throws Exception {
@@ -21,7 +24,7 @@ public class CacheGroupClientTest {
     }
 
     @Test
-    public void create() throws Exception {
+    public void test001_create() throws Exception {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         String cacheGroupName = "cache_group_test1";
@@ -40,7 +43,7 @@ public class CacheGroupClientTest {
     }
 
     @Test
-    public void search() throws Exception {
+    public void test002_search() throws Exception {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
@@ -51,7 +54,7 @@ public class CacheGroupClientTest {
     }
 
     @Test
-    public void save() throws Exception {
+    public void test003_save() throws Exception {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();
@@ -62,7 +65,7 @@ public class CacheGroupClientTest {
     }
 
     @Test
-    public void update() throws Exception {
+    public void test004_update() throws Exception {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         CacheGroupUpdateResponse response = cacheGroupClient.update("cache_group_test1", 4);
@@ -71,7 +74,7 @@ public class CacheGroupClientTest {
 
 
     @Test
-    public void delete() throws Exception {
+    public void test005_delete() throws Exception {
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheGroupClient cacheGroupClient = new CacheGroupClient(cacheClusterViewer);
         CacheGroupDeleteResponse response = cacheGroupClient.delete("cache_group_test1");

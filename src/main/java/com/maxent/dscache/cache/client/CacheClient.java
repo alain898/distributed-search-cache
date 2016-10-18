@@ -1,5 +1,6 @@
 package com.maxent.dscache.cache.client;
 
+import com.google.common.base.Preconditions;
 import com.maxent.dscache.api.rest.request.RestCreateCacheRequest;
 import com.maxent.dscache.api.rest.request.RestDeleteCacheRequest;
 import com.maxent.dscache.api.rest.request.RestSubCacheSearchRequest;
@@ -16,6 +17,7 @@ import com.maxent.dscache.cache.client.response.CacheSearchResponse;
 import com.maxent.dscache.common.http.HttpClient;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.ConfigFactory;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Created by alain on 16/8/20.
@@ -29,6 +31,8 @@ public class CacheClient {
     }
 
     public CacheSearchResponse search(String cacheName, ICacheEntry entry) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
+        Preconditions.checkNotNull(entry, "entry is null");
 
         String keys = entry.key();
         CacheMeta cache = cacheClusterViewer.getCache(cacheName);
@@ -56,6 +60,8 @@ public class CacheClient {
     }
 
     public CacheSaveResponse save(String cacheName, ICacheEntry entry) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
+        Preconditions.checkNotNull(entry, "entry is null");
 
         String keys = entry.key();
         CacheMeta cache = cacheClusterViewer.getCache(cacheName);
@@ -78,16 +84,24 @@ public class CacheClient {
     }
 
 
-    public CacheCreateResponse create(String name, String entryClassName,
+    public CacheCreateResponse create(String cacheName, String entryClassName,
                                       int subCaches, int partitionsPerSubCache,
                                       int blockCapacity, int blocksPerPartition) throws Exception {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(entryClassName), "entryClassName is blank");
+        Preconditions.checkArgument(Validator.isValidSubCachesNumber(subCaches), "subCachesPerCache must be positive");
+        Preconditions.checkArgument(Validator.isValidPartitions(partitionsPerSubCache), "partitionsPerSubCache must be positive");
+        Preconditions.checkArgument(Validator.isValidBlockCapacity(blockCapacity), "blockCapacity must be positive");
+        Preconditions.checkArgument(Validator.isValidBlocks(blocksPerPartition), "blocksPerPartition must be positive");
+
+
         Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
         String path = "/management/cache/create";
         HttpClient httpClient = new HttpClient();
         RestCreateCacheRequest request = new RestCreateCacheRequest();
-        request.setName(name);
+        request.setName(cacheName);
         request.setEntryClassName(entryClassName);
         request.setSubCaches(subCaches);
         request.setPartitionsPerSubCache(partitionsPerSubCache);
@@ -105,6 +119,8 @@ public class CacheClient {
     }
 
     public CacheDeleteResponse delete(String cacheName) throws Exception {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheName), "cacheName is blank");
+
         Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());

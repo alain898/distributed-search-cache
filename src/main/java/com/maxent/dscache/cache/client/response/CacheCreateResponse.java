@@ -4,15 +4,15 @@ package com.maxent.dscache.cache.client.response;
  * Created by alain on 16/9/10.
  */
 public class CacheCreateResponse {
-    private String name;
+    private String cacheName;
     private String entryClassName;
     private int subCaches;
     private int partitionsPerSubCache;
     private int blockCapacity;
     private int blocksPerPartition;
 
-    public CacheCreateResponse(String name, String entryClassName, int subCaches, int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
-        this.name = name;
+    public CacheCreateResponse(String cacheName, String entryClassName, int subCaches, int partitionsPerSubCache, int blockCapacity, int blocksPerPartition) {
+        this.cacheName = cacheName;
         this.entryClassName = entryClassName;
         this.subCaches = subCaches;
         this.partitionsPerSubCache = partitionsPerSubCache;
@@ -20,12 +20,12 @@ public class CacheCreateResponse {
         this.blocksPerPartition = blocksPerPartition;
     }
 
-    public String getName() {
-        return name;
+    public String getCacheName() {
+        return cacheName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setCacheName(String cacheName) {
+        this.cacheName = cacheName;
     }
 
     public String getEntryClassName() {

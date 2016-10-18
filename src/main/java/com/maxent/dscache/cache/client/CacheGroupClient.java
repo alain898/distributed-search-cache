@@ -30,7 +30,14 @@ public class CacheGroupClient {
     }
 
     public CacheSearchResponse search(String cacheGroupName, ICacheEntry entry) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheGroupName), "cacheGroupName is blank");
+        Preconditions.checkNotNull(entry, "entry is blank");
+
         CacheGroupMeta cacheGroupMeta = cacheClusterViewer.getCacheGroupMeta(cacheGroupName);
+        if (cacheGroupMeta == null) {
+            throw new CacheClientException(String.format("can not find cache group by name[%s]", cacheGroupMeta));
+        }
+
         String key = entry.key();
         IPartitioner partitioner = new HashPartitioner(cacheGroupMeta.getCacheGroupCapacity());
         int partition = partitioner.getPartition(key);
@@ -66,9 +73,15 @@ public class CacheGroupClient {
                                            int partitionsPerSubCache,
                                            int blockCapacity,
                                            int blocksPerPartition) {
-        Preconditions.checkArgument(StringUtils.isNotBlank(cacheGroupName),"cacheGroupName is blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheGroupName), "cacheGroupName is blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(entryClassName), "entryClassName is blank");
-        Preconditions.checkArgument(Validator.isValidCachesNumber(cacheGroupCapacity));
+        Preconditions.checkArgument(Validator.isValidCachesNumber(cacheGroupCapacity), "cacheGroupCapacity must be power of two");
+        Preconditions.checkArgument(Validator.isValidCachesNumber(cachesNumber), "cachesNumber must be power of two");
+        Preconditions.checkArgument(Validator.isValidSubCachesNumber(subCachesPerCache), "subCachesPerCache must be positive");
+        Preconditions.checkArgument(Validator.isValidPartitions(partitionsPerSubCache), "partitionsPerSubCache must be positive");
+        Preconditions.checkArgument(Validator.isValidBlockCapacity(blockCapacity), "blockCapacity must be positive");
+        Preconditions.checkArgument(Validator.isValidBlocks(blocksPerPartition), "blocksPerPartition must be positive");
+        Preconditions.checkArgument(cacheGroupCapacity >= cachesNumber, "cacheGroupCapacity must be greater than cachesNumber");
 
 
         Host host = cacheClusterViewer.getHosts().get(0);
@@ -92,6 +105,14 @@ public class CacheGroupClient {
 
     public CacheGroupUpdateResponse update(String cacheGroupName,
                                            int addedCaches) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheGroupName), "cacheGroupName is blank");
+        Preconditions.checkArgument(addedCaches >= 0, "addedCaches must be positive");
+
+        CacheGroupMeta cacheGroupMeta = cacheClusterViewer.getCacheGroupMeta(cacheGroupName);
+        if (cacheGroupMeta == null) {
+            throw new CacheClientException(String.format("can not find cache group by name[%s]", cacheGroupMeta));
+        }
+
         Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());
@@ -107,6 +128,8 @@ public class CacheGroupClient {
     }
 
     public CacheGroupDeleteResponse delete(String cacheGroupName) throws Exception {
+        Preconditions.checkArgument(StringUtils.isNotBlank(cacheGroupName), "cacheGroupName is blank");
+
         Host host = cacheClusterViewer.getHosts().get(0);
 
         String url = String.format("http://%s:%d", host.getHost(), host.getPort());

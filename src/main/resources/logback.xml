@@ -1,11 +1,11 @@
 <configuration debug="true" scan="true" scanPeriod="5 minutes">
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <appender cacheName="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%t] %-5p %c{36}[%file:%line]  - %m%n</pattern>
         </encoder>
     </appender>
 
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <appender cacheName="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>
                 /services/logs/distributed-search-subCache/distributed-search-cache.log-%d{yyyy-MM-dd_HH}.%i
