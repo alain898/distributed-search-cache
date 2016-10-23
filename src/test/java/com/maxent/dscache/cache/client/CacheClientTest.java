@@ -1,5 +1,6 @@
 package com.maxent.dscache.cache.client;
 
+import com.maxent.dscache.DSCache;
 import com.maxent.dscache.cache.CacheClusterViewer;
 import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
@@ -7,9 +8,7 @@ import com.maxent.dscache.cache.client.response.*;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.ConfigFactory;
 import junit.framework.TestCase;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 
 /**
@@ -18,9 +17,19 @@ import org.junit.runners.MethodSorters;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CacheClientTest {
 
-    @Before
-    public void setUp() throws Exception {
+    private static DSCache dsCache = null;
+
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        dsCache = new DSCache();
+        dsCache.start();
         CacheClusterViewerFactory.configure(ConfigFactory.load());
+    }
+
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception {
+        dsCache.stop();
+        dsCache = null;
     }
 
     @Test
@@ -58,7 +67,6 @@ public class CacheClientTest {
 
     @Test
     public void test003_search() throws Exception {
-        CacheClusterViewerFactory.configure(ConfigFactory.load());
         CacheClusterViewer cacheClusterViewer = CacheClusterViewerFactory.getCacheClusterViewer();
         CacheClient cacheClient = new CacheClient(cacheClusterViewer);
         TestCacheEntry testCacheEntry = new TestCacheEntry();

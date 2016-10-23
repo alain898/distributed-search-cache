@@ -17,9 +17,9 @@ import java.util.Arrays;
 /**
  * Created by alain on 16/7/19.
  */
-public class Main implements Daemon {
+public class DSCache implements Daemon {
 
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static final Logger logger = LoggerFactory.getLogger(DSCache.class);
 
     private ApiServer apiServer;
 
@@ -92,8 +92,8 @@ public class Main implements Daemon {
 
     public static void main(String[] args) throws Exception {
         try {
-            Main restServer = new Main();
-            restServer.start();
+            DSCache dsCache = new DSCache();
+            dsCache.start();
             while (true) Thread.sleep(1000);
         } catch (InterruptedException e) {
             //ignore

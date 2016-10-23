@@ -1,5 +1,6 @@
 package com.maxent.dscache.cache.client;
 
+import com.maxent.dscache.DSCache;
 import com.maxent.dscache.cache.CacheClusterViewer;
 import com.maxent.dscache.cache.CacheClusterViewerFactory;
 import com.maxent.dscache.cache.TestCacheEntry;
@@ -7,21 +8,30 @@ import com.maxent.dscache.cache.client.response.*;
 import com.maxent.dscache.common.tools.JsonUtils;
 import com.typesafe.config.ConfigFactory;
 import junit.framework.TestCase;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
-
-import static org.junit.Assert.*;
 
 /**
  * Created by alain on 16/9/16.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CacheGroupClientTest {
-    @Before
-    public void setUp() throws Exception {
+    private static DSCache dsCache = null;
+
+    @BeforeClass
+    public static void setUp() throws Exception {
+        dsCache = new DSCache();
+        dsCache.start();
         CacheClusterViewerFactory.configure(ConfigFactory.load());
+    }
+
+    @AfterClass
+    public static void tearDown() throws Exception {
+        dsCache.stop();
+        dsCache = null;
     }
 
     @Test
