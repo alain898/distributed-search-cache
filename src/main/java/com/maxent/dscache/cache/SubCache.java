@@ -13,6 +13,8 @@ import com.maxent.dscache.common.partitioner.IPartitioner;
 import com.maxent.dscache.common.persist.Flusher;
 import com.maxent.dscache.common.persist.PersistUtils;
 import com.maxent.dscache.common.tools.JsonUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.FileUtils;
@@ -59,7 +61,7 @@ public class SubCache<E extends ICacheEntry> {
 
     private final String persistFile;
     private final Flusher flusher;
-    private final String persistDir = DEFAULT_PERSIST_DIR;
+    private String persistDir = DEFAULT_PERSIST_DIR;
 
     private volatile boolean shutdown = false;
 
@@ -78,6 +80,13 @@ public class SubCache<E extends ICacheEntry> {
         Preconditions.checkArgument(partitionNumber > 0, "partitionNumber must be positive");
         Preconditions.checkArgument(blockCapacity > 0, "blockCapacity must be positive");
         Preconditions.checkArgument(blockNumber > 0, "blockNumber must be positive");
+
+        try {
+            Config config = ConfigFactory.load();
+            persistDir = config.getString("server.data_dir");
+        } catch (Exception e) {
+            logger.warn("failed to config server.data_dir");
+        }
 
         this.cacheName = cacheName;
         this.subCacheId = subCacheId;
@@ -98,9 +107,9 @@ public class SubCache<E extends ICacheEntry> {
         this.flushThread.start();
 
         logger.info(String.format("cacheName[%s], totalPartitionNumber[%d], cacheEntryClass[%s], subCacheId[%s]," +
-                        "partitionNumber[%d], blockCapacity[%d], blockNumber[%d]",
+                        "partitionNumber[%d], blockCapacity[%d], blockNumber[%d], persistDir[%s]",
                 this.cacheName, this.totalPartitionNumber, this.cacheEntryClass, this.subCacheId,
-                this.partitionNumber, this.blockCapacity, this.blockNumber));
+                this.partitionNumber, this.blockCapacity, this.blockNumber, this.persistDir));
     }
 
     private List<IPartition<E>> createPartitions(int partitionNumber, int blockCapacity, long totalBlockNumber) {
