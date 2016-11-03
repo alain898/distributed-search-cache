@@ -36,7 +36,7 @@ DSCache uses Zookeeper to coordinate the cluster and store cluster status, so Zo
 
 JSVC is used to daemonize DSCache, so JSVC also need to be installed.
 
-Modify the confiuration file conf/application.conf according according to the actual deployment.
+Modify the confiuration file conf/application.conf according to the actual deployment.
 
 ```
 server {
